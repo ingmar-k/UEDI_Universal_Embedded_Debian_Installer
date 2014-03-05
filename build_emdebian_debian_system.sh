@@ -1,5 +1,5 @@
 #!/bin/bash
-# Bash script that creates a Debian or Emdebian rootfs or even a complete SATA/USB drive for a Pogoplug V3 device
+# Bash script that creates a Debian or Emdebian rootfs or even a complete SATA/USB/SD drive/card for a embedded device
 # Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
 
@@ -7,8 +7,6 @@
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.
 
 trap int_cleanup INT
-source general_settings.sh # Including settings through an additional file
-source build_functions.sh # functions called by this main build script
 
 ##################################################################################################
 ####### GETTING THE NAME OF THE LOGGED IN USER, FOR USE IN THE DEFAULT OUTPUT-DIRECTORY ##########
@@ -21,6 +19,8 @@ fi
 ##################################################################################################
 ##################################################################################################
 
+source general_settings.sh # Including settings through an additional file
+source build_functions.sh # functions called by this main build script
 
 
 #########################
@@ -46,7 +46,7 @@ then
 		echo "Cleaning the cache directory, now!"
 		if [ -d ${output_dir_base}/cache/ ]
 		then
-			rm -rf ${output_dir_base}/cache/*
+			rm -rf ${output_dir_base}/cache/
 		else
 			echo "No cache directory '${output_dir_base}/cache/' found, so not cleaning it!"
 		fi
@@ -66,7 +66,7 @@ then
 		echo "Cleaning the cache directory, now!"
 		if [ -d ${output_dir_base}/cache/ ]
 		then
-			rm -rf ${output_dir_base}/cache/*
+			rm -rf ${output_dir_base}/cache/
 		else
 			echo "No cache directory '${output_dir_base}/cache/' found, so not cleaning it!"
 		fi
@@ -109,12 +109,12 @@ then
 elif [ \( "$1" = "--install" -o "$1" = "-i" \) -a ! -z "$2" ] # case of wanting to install a existing rootfs-image to USB drive
 then
 	prep_output
-	fn_log_echo "Running the script in install-only mode!
+	write_log "Running the script in install-only mode!
 Just creating a complete, fully bootable USB drive."
 	#param_1="install"
 	if [ "$2" = "default" ]
 	then
-		fn_log_echo "Using the default rootfs-package settings defined in 'general_settings.sh'."
+		write_log "Using the default rootfs-package settings defined in 'general_settings.sh'."
 		rootfs_package=${default_rootfs_package}
 	else 
 		rootfs_package_path=${2%/*}
@@ -130,7 +130,7 @@ Just creating a complete, fully bootable USB drive."
 		tar_format="gz"
 		output_filename="${rootfs_package_name%.tar.gz}"
 	else
-		fn_log_echo "The variable rootfs_package_name seems to point to a file that is neither a '.tar.bz2' nor a '.tar.gz' package.
+		write_log "The variable rootfs_package_name seems to point to a file that is neither a '.tar.bz2' nor a '.tar.gz' package.
 Please check! Exiting now."
 		exit 2
 	fi

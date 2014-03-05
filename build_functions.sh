@@ -1,5 +1,5 @@
 #!/bin/bash
-# Bash script that creates a Debian or Emdebian rootfs or even a complete SATA/USB drive for a Pogoplug V3 device
+# Bash script that creates a Debian or Emdebian rootfs or even a complete SATA/USB/SD drive/card for a embedded device
 # Should run on current Debian or Ubuntu versions
 # Author: Ingmar Klein (ingmar.klein@hs-augsburg.de)
 
@@ -11,25 +11,12 @@
 ##### MAIN Highlevel Functions: #####
 #####################################
 
-if [ -f ./machines/${machine_id}/machine_functions.sh ]
-then
-	source ./machines/${machine_id}/machine_functions.sh # Including settings through the additional machine specific settings file
-else
-	echo "ERROR! Machine files NOT found!
-Please check the 'machine_id' variable! Available machines are 
-'`eval ls \`pwd\`/machines/`'
-Exiting now!"
-	regular_cleanup
-	exit 2
-fi
-
-
 ### Preparation ###
 
 prep_output()
 {
 	
-if [ ! -d ${output_dir_base}/cache ]
+if [ "${use_cache}" = "yes" -a ! -d ${output_dir_base}/cache ]
 then
 	mkdir -p ${output_dir_base}/cache
 fi
@@ -39,7 +26,8 @@ if [ "$?" = "0" ]
 then
 	echo "Output directory '${output_dir}' successfully created."
 else
-	echo "ERROR while trying to create the output directory '${output_dir}'. Exiting now!"
+	echo "ERROR: Creating the output directory '${output_dir}' did not seem to work.
+'mkdir' returned the error code '$?'. Exiting now!"
 	exit 5
 fi
 
@@ -49,7 +37,8 @@ if [ "$?" = "0" ]
 then
 	echo "Subfolder 'tmp' of output directory '${output_dir}' successfully created."
 else
-	echo "ERROR while trying to create the 'tmp' subfolder '${output_dir}/tmp'. Exiting now!"
+	echo "ERROR: Creating the 'tmp' subfolder '${output_dir}/tmp' did not seem to work.
+'mkdir' returned the error code '$?'. Exiting now!"
 	exit 6
 fi
 }
@@ -69,11 +58,11 @@ build_rootfs()
 }
 
 
-### USB thumb drive creation ###
+### USB/SATA/SD drive/card creation ###
 create_drive()
 {
-	partition_n_format_disk # USB drive: make partitions and format
-	finalize_disk # copy the bootloader, rootfs and kernel to the USB drive
+	partition_n_format_disk # drive/card: make partitions and format
+	finalize_disk # copy the bootloader, rootfs and kernel to the drive/card
 }
 
 
@@ -96,12 +85,20 @@ fi
 
 
 # Description: Function to log and echo messages in terminal at the same time
-fn_log_echo()
+write_log()
 {
 	if [ -d ${output_dir} ]
 	then
-		echo "`date`:   ${1}" >> ${output_dir}/log.txt
-		echo "${1}"
+		if [ ! "${1:0:6}" = "ERROR:" ]
+		then
+			echo "`date`:   ${1}
+------------------------------------------------------------" >> ${output_dir}/std_log.txt
+			echo "${1}"
+		else
+			echo "`date`:   ${1}
+------------------------------------------------------------" >> ${output_dir}/error_log.txt
+			echo "${1}"
+		fi
 	else
 		echo "Output directory '${output_dir}' doesn't exist. Exiting now!"
 		exit 11
@@ -112,24 +109,24 @@ fn_log_echo()
 # Description: Function that checks if the needed internet connectivity is there.
 check_connectivity()
 {
-fn_log_echo "Checking internet connectivity, which is mandatory for the next step."
-for i in {1..3}
+write_log "Checking internet connectivity, which is mandatory for the next step."
+for i in {1..5}
 do
 	for i in google.com kernel.org debian.org ubuntu.com linuxmint.com
 	do
 		ping -c 3 ${i}
 		if [ "$?" = "0" ]
 		then 
-			fn_log_echo "Pinging '${i}' worked. Internet connectivity seems fine."
+			write_log "Pinging '${i}' worked. Internet connectivity seems fine."
 			done=1
 			break
 		else
-			fn_log_echo "ERROR! Pinging '${i}' did NOT work. Internet connectivity seems bad or you are not connected.
-	Please check, if in doubt!"
+			write_log "ERROR: Pinging '${i}' did NOT work. Internet connectivity seems bad or you are not connected.
+Please check, if in doubt!"
 			if [ "${i}" = "kernel.org" ]
 			then
-				fn_log_echo "ERROR! All 3 ping attempts failed! You do not appear to be connected to the internet.
-	Exiting now!"
+				write_log "ERROR: All 3 ping attempts failed! You do not appear to be connected to the internet.
+Exiting now!"
 				exit 97
 			else	
 				continue
@@ -150,7 +147,7 @@ check_n_install_prerequisites()
 	
 check_connectivity
 
-fn_log_echo "Installing some packages, if needed."
+write_log "Installing some packages, if needed."
 if [ "${host_os}" = "Debian" ]
 then
 	apt_prerequisites=${apt_prerequisites_debian}
@@ -158,7 +155,7 @@ elif [ "${host_os}" = "Ubuntu" ]
 then
 	apt_prerequisites=${apt_prerequisites_ubuntu}
 else
-	fn_log_echo "OS-Type '${host_os}' not correct.
+	write_log "OS-Type '${host_os}' not correct.
 Please run 'build_debian_system.sh --help' for more information"
 	exit 12
 fi
@@ -170,35 +167,35 @@ do
 	dpkg -l |grep "ii  ${1}" >/dev/null
 	if [ "$?" = "0" ]
 	then
-		fn_log_echo "Package '${1}' is already installed. Nothing to be done."
+		write_log "Package '${1}' is already installed. Nothing to be done."
 	else
-		fn_log_echo "Package '${1}' is not installed yet.
+		write_log "Package '${1}' is not installed yet.
 Trying to install it now!"
 		if [ ! "${apt_get_update_done}" = "true" ]
 		then
-			fn_log_echo "Running 'apt-get update' to get the latest package dependencies."
+			write_log "Running 'apt-get update' to get the latest package dependencies."
 			apt-get update
 			if [ "$?" = "0" ]
 			then
-				fn_log_echo "'apt-get update' ran successfully! Continuing..."
+				write_log "'apt-get update' ran successfully! Continuing..."
 				apt_get_update_done="true"
 			else
-				fn_log_echo "ERROR while trying to run 'apt-get update'. Exiting now."
+				write_log "ERROR: Running 'apt-get update' returned an error code ( '$?' ). Exiting now."
 				exit 13
 			fi
 		fi
 		apt-get install -y ${1}
 		if [ "$?" = "0" ]
 		then
-			fn_log_echo "'${1}' installed successfully!"
+			write_log "'${1}' installed successfully!"
 		else
-			fn_log_echo "ERROR while trying to install '${1}'."
+			write_log "ERROR: Running 'apt-get install' for '${1}' returned an error code ( '$?' )."
 			if [ "${host_os}" = "Ubuntu" ] && [ "${1}" = "qemu-system" ]
 			then
-				fn_log_echo "Assuming that you are running this on Ubuntu 10.XX, where the package 'qemu-system' doesn't exist.
+				write_log "Assuming that you are running this on Ubuntu 10.XX, where the package 'qemu-system' doesn't exist.
 If your host system is not Ubuntu 10.XX based, this could lead to errors. Please check!"
 			else
-				fn_log_echo "Exiting now!"
+				write_log "Exiting now!"
 				exit 14
 			fi
 		fi
@@ -209,9 +206,9 @@ If your host system is not Ubuntu 10.XX based, this could lead to errors. Please
 		sh -c "dpkg -l|grep \"qemu-user-static\"|grep \"1.\"" >/dev/null
 		if [ $? = "0" ]
 		then
-			fn_log_echo "Sufficient version of package '${1}' found. Continueing..."
+			write_log "Sufficient version of package '${1}' found. Continueing..."
 		else
-			fn_log_echo "The installed version of package '${1}' is too old.
+			write_log "The installed version of package '${1}' is too old.
 You need to install a package with a version of at least 1.0.
 For example from the debian-testing ('http://packages.debian.org/search?keywords=qemu&searchon=names&suite=testing&section=all')
 respectively the Ubuntu precise ('http://packages.ubuntu.com/search?keywords=qemu&searchon=names&suite=precise&section=all') repositiories.
@@ -222,54 +219,58 @@ Exiting now!"
 	shift
 done
 
-fn_log_echo "Function 'check_n_install_prerequisites' DONE."
+write_log "Function 'check_n_install_prerequisites' DONE."
 }
 
 
 # Description: Create a image file as root-device for the installation process
 create_n_mount_temp_image_file()
 {
-fn_log_echo "Creating the temporary image file for the debootstrap process."
+write_log "Creating the temporary image file for the debootstrap process."
 dd if=/dev/zero of=${output_dir}/${output_filename}.img bs=1M count=${work_image_size_MB}
 if [ "$?" = "0" ]
 then
-	fn_log_echo "File '${output_dir}/${output_filename}.img' successfully created with a size of ${work_image_size_MB}MB."
+	write_log "File '${output_dir}/${output_filename}.img' successfully created with a size of ${work_image_size_MB}MB."
 else
-	fn_log_echo "ERROR while trying to create the file '${output_dir}/${output_filename}.img'. Exiting now!"
+	write_log "ERROR: Creating the file '${output_dir}/${output_filename}.img' did not seem to work.
+'dd' returned the error code '$?'. Exiting now!"
 	exit 16
 fi
 
-fn_log_echo "Formatting the image file with the '${rootfs_filesystem_type}' filesystem."
+write_log "Formatting the image file with the '${rootfs_filesystem_type}' filesystem."
 mkfs.${rootfs_filesystem_type} -F ${output_dir}/${output_filename}.img
 if [ "$?" = "0" ]
 then
-	fn_log_echo "'${rootfs_filesystem_type}' filesystem successfully created on '${output_dir}/${output_filename}.img'."
+	write_log "'${rootfs_filesystem_type}' filesystem successfully created on '${output_dir}/${output_filename}.img'."
 else
-	fn_log_echo "ERROR while trying to create the '${rootfs_filesystem_type}' filesystem on  '${output_dir}/${output_filename}.img'. Exiting now!"
+	write_log "ERROR: Creating the '${rootfs_filesystem_type}' filesystem on  '${output_dir}/${output_filename}.img' didn not seem to work.
+'mkfs.${rootfs_filesystem_type}' returned error code '$?'. Exiting now!"
 	exit 17
 fi
 
-fn_log_echo "Creating the directory to mount the temporary filesystem."
+write_log "Creating the directory to mount the temporary filesystem."
 mkdir -p ${qemu_mnt_dir}
 if [ "$?" = "0" ]
 then
-	fn_log_echo "Directory '${qemu_mnt_dir}' successfully created."
+	write_log "Directory '${qemu_mnt_dir}' successfully created."
 else
-	fn_log_echo "ERROR while trying to create the directory '${qemu_mnt_dir}'. Exiting now!"
+	write_log "ERROR: Trying to create the directory '${qemu_mnt_dir}' did not seem to work.
+'mkdir' returned error code '$?'. Exiting now!"
 	exit 18
 fi
 
-fn_log_echo "Now mounting the temporary filesystem."
+write_log "Now mounting the temporary filesystem."
 mount ${output_dir}/${output_filename}.img ${qemu_mnt_dir} -o loop
 if [ "$?" = "0" ]
 then
-	fn_log_echo "Filesystem correctly mounted on '${qemu_mnt_dir}'."
+	write_log "Filesystem correctly mounted on '${qemu_mnt_dir}'."
 else
-	fn_log_echo "ERROR while trying to mount the filesystem on '${qemu_mnt_dir}'. Exiting now!"
+	write_log "ERROR: Trying to mount the filesystem on '${qemu_mnt_dir}' did not seem to work.
+'mount' returned error code '$?'. Exiting now!"
 	exit 19
 fi
 
-fn_log_echo "Function 'create_n_mount_temp_image_file' DONE."
+write_log "Function 'create_n_mount_temp_image_file' DONE."
 }
 
 
@@ -281,26 +282,26 @@ check_connectivity
 
 if [ ! -e /usr/share/debootstrap/scripts/${build_target_version} ]
 then
-	fn_log_echo "Creating a symlink now, in order to make debootstrap work."
+	write_log "Creating a symlink now, in order to make debootstrap work."
 	ln -s /usr/share/debootstrap/scripts/${build_target_version%-grip} /usr/share/debootstrap/scripts/${build_target_version}
 	if [ "$?" = "0" ]
 	then
-		fn_log_echo "Debootstrap script symlink successfully created!"
+		write_log "Necessary debootstrap script symlink '/usr/share/debootstrap/scripts/${build_target_version%-grip}' successfully created!"
 	fi
 fi
 	
-fn_log_echo "Running first stage of debootstrap now."
+write_log "Running first stage of debootstrap now."
 
 if [ "${build_target}" = "emdebian" ]
 then
 	build_target_version="${build_target_version}-grip"
 	if [ ! -f /usr/share/debootstrap/scripts/${build_target_version} ]
 	then
-		fn_log_echo "Creating a symlink now, in order to make debootstrap work."
+		write_log "Creating a symlink now, in order to make debootstrap work."
 		ln -s /usr/share/debootstrap/scripts/${build_target_version%-grip} /usr/share/debootstrap/scripts/${build_target_version}
 		if [ "$?" = "0" ]
 		then
-			fn_log_echo "Debootstrap script symlink successfully created!"
+			write_log "Debootstrap script symlink successfully created!"
 		fi
 	fi
 fi
@@ -311,32 +312,32 @@ then
 	then
 		if [ -e "${output_dir_base}/cache/${base_sys_cache_tarball}" ]
 		then
-			fn_log_echo "Using emdebian/debian debootstrap tarball '${output_dir_base}/cache/${base_sys_cache_tarball}' from cache."
+			write_log "Using emdebian/debian debootstrap tarball '${output_dir_base}/cache/${base_sys_cache_tarball}' from cache."
 			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
 		else
-			fn_log_echo "No debian debootstrap tarball found in cache. Creating one now!"
+			write_log "No debian debootstrap tarball found in cache. Creating one now!"
 			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --make-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${output_dir_base}/cache/tmp/" "${target_mirror_url}"
 			sleep 3
 			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
 		fi
 	fi
 else
-	fn_log_echo "Not using cache, according to the settings. Thus running debootstrap without creating a tarball."
+	write_log "Not using cache, according to the settings. Thus running debootstrap without creating a tarball."
 	debootstrap --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --include=${deb_add_packages} --verbose --arch armel --variant=minbase --foreign "${build_target_version}" "${qemu_mnt_dir}" "${target_mirror_url}"
 fi
 
 if [ "$?" = "0" ]
 then
-	fn_log_echo "Debootstrap's first stage ran successfully!"
+	write_log "Debootstrap's first stage ran successfully!"
 else
-	fn_log_echo "Errors while trying to run the first part of the debootstrap operations.
-Exiting now!"
+	write_log "ERROR: While trying to run the first part of the debootstrap operations an error occurred.
+'debootstrap' returned error code '$?'. Exiting now!"
 	regular_cleanup
 	exit 98
 fi
 
 
-fn_log_echo "Starting the second stage of debootstrap now."
+write_log "Starting the second stage of debootstrap now."
 echo "#!/bin/bash
 /debootstrap/debootstrap --second-stage 2>>/debootstrap_stg2_errors.txt
 cd /root 2>>/debootstrap_stg2_errors.txt
@@ -453,17 +454,18 @@ cp /usr/bin/qemu-arm-static ${qemu_mnt_dir}/usr/bin
 
 mkdir -p ${qemu_mnt_dir}/dev/pts
 
-fn_log_echo "Mounting both /dev/pts and /proc on the temporary filesystem."
+write_log "Mounting both /dev/pts and /proc on the temporary filesystem."
 mount devpts ${qemu_mnt_dir}/dev/pts -t devpts
 mount -t proc proc ${qemu_mnt_dir}/proc
 
-fn_log_echo "Entering chroot environment NOW!"
+write_log "Entering chroot environment NOW!"
 /usr/sbin/chroot ${qemu_mnt_dir} /bin/bash /debootstrap_pt1.sh 2>${output_dir}/debootstrap_pt1_errors.txt
 if [ "$?" = "0" ]
 then
-	fn_log_echo "First part of chroot operations done successfully!"
+	write_log "First part of chroot operations done successfully!"
 else
-	fn_log_echo "Errors while trying to run the first part of the chroot operations."
+	write_log "ERROR: While trying to run the first part of the chroot operations an error occurred.
+'chroot' returned error code '$?'."
 fi
 
 if [ "${use_cache}" = "yes" ]
@@ -472,11 +474,11 @@ then
 	then
 		if [ -e ${output_dir_base}/cache/additional_packages.tar.bz2 ]
 		then
-			fn_log_echo "Extracting the additional packages 'additional_packages.tar.bz2' from cache. now."
+			write_log "Extracting the additional packages 'additional_packages.tar.bz2' from cache. now."
 			tar_all extract "${output_dir_base}/cache/additional_packages.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
 		elif [ ! -e "${output_dir}/cache/additional_packages.tar.bz2" ]
 		then
-			fn_log_echo "No compressed additional_packages archive found in cache directory.
+			write_log "No compressed additional_packages archive found in cache directory.
 Creating it now!"
 			add_pack_create="yes"
 		fi
@@ -484,16 +486,16 @@ Creating it now!"
 	then
 		if [ -e ${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2 ]
 		then
-			fn_log_echo "Extracting the additional packages 'additional_packages_including_wireless.tar.bz2' from cache. now."
+			write_log "Extracting the additional packages 'additional_packages_including_wireless.tar.bz2' from cache. now."
 			tar_all extract "${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
 		elif [ ! -e "${output_dir}/cache/additional_packages_including_wireless.tar.bz2" ]
 		then
-			fn_log_echo "No compressed additional_packages_including_wireless archive found in cache directory.
+			write_log "No compressed additional_packages_including_wireless archive found in cache directory.
 Creating it now!"
 			add_pack_create="yes"
 		fi
 	else
-		fn_log_echo "Setting for pogoplug_v3_version seems to be incorrect.
+		write_log "Setting for pogoplug_v3_version seems to be incorrect.
 It was set to '${poogplug_v3_version}'. Please check!."
 		umount_img all
 		exit 95
@@ -539,23 +541,24 @@ rm /debootstrap_pt2.sh
 exit 0" > ${qemu_mnt_dir}/debootstrap_pt2.sh
 chmod +x ${qemu_mnt_dir}/debootstrap_pt2.sh
 
-fn_log_echo "Mounting both /dev/pts and /proc on the temporary filesystem."
+write_log "Mounting both /dev/pts and /proc on the temporary filesystem."
 mount devpts ${qemu_mnt_dir}/dev/pts -t devpts
 mount -t proc proc ${qemu_mnt_dir}/proc
 
-fn_log_echo "Entering chroot environment NOW!"
+write_log "Entering chroot environment NOW!"
 /usr/sbin/chroot ${qemu_mnt_dir} /bin/bash /debootstrap_pt2.sh 2>${output_dir}/debootstrap_pt2_errors.txt
 
 if [ "$?" = "0" ]
 then
-	fn_log_echo "Second part of chroot operations done successfully!"
+	write_log "Second part of chroot operations done successfully!"
 else
-	fn_log_echo "Errors while trying to run the second part of the chroot operations."
+	write_log "ERROR: While trying to run the second part of the chroot operations an error occurred.
+'chroot' returned error code '$?'."
 fi
 
 if [ "${add_pack_create}" = "yes" ]
 then
-	fn_log_echo "Compressing additional packages, in order to save them in the cache directory."
+	write_log "Compressing additional packages, in order to save them in the cache directory."
 	cd ${qemu_mnt_dir}/var/cache/apt/
 	if [ "${pogoplug_v3_version}" = "classic" ]
 	then
@@ -564,19 +567,19 @@ then
 	then
 		tar_all compress "${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2" .
 	else
-		fn_log_echo "Setting for pogoplug_v3_version seems to be incorrect.
+		write_log "Setting for pogoplug_v3_version seems to be incorrect.
 It was set to '${poogplug_v3_version}'. Please check!."
 		umount_img all
 		exit 96
 	fi
-	fn_log_echo "Successfully created compressed cache archive of additional packages."
+	write_log "Successfully created compressed cache archive of additional packages."
 	cd ${output_dir}
 fi
 
 sleep 5
 umount_img sys
-fn_log_echo "Just exited chroot environment."
-fn_log_echo "Base debootstrap steps 1&2 are DONE!"
+write_log "Just exited chroot environment."
+write_log "Base debootstrap steps 1&2 are DONE!"
 }
 
 
@@ -584,26 +587,26 @@ fn_log_echo "Base debootstrap steps 1&2 are DONE!"
 do_post_debootstrap_config()
 {
 
-fn_log_echo "Now starting the post-debootstrap configuration steps."
+write_log "Now starting the post-debootstrap configuration steps."
 mkdir -p ${output_dir}/qemu-kernel
 
 if [ "${use_cache}" = "yes" ]
 then
 	if [ -e ${output_dir_base}/cache/${std_kernel_pkg##*/} ]
 	then
-		fn_log_echo "Found standard kernel package in cache. Just linking it locally now."
+		write_log "Found standard kernel package in cache. Just linking it locally now."
 		ln -s ${output_dir_base}/cache/${std_kernel_pkg##*/} ${output_dir}/tmp/${std_kernel_pkg##*/}
 	else
-		fn_log_echo "Standard kernel package NOT found in cache. Getting it now and copying it to cache."
+		write_log "Standard kernel package NOT found in cache. Getting it now and copying it to cache."
 		get_n_check_file "${std_kernel_pkg}" "standard_kernel" "${output_dir}/tmp"
 		cp ${output_dir}/tmp/${std_kernel_pkg##*/} ${output_dir_base}/cache/
 	fi
 	if [ -e ${output_dir_base}/cache/${qemu_kernel_pkg##*/} ]
 	then
-		fn_log_echo "Found qemu kernel package in cache. Just linking it locally now."
+		write_log "Found qemu kernel package in cache. Just linking it locally now."
 		ln -s ${output_dir_base}/cache/${qemu_kernel_pkg##*/} ${output_dir}/tmp/${qemu_kernel_pkg##*/}
 	else
-		fn_log_echo "Qemu kernel package NOT found in cache. Getting it now and copying it to cache."
+		write_log "Qemu kernel package NOT found in cache. Getting it now and copying it to cache."
 		get_n_check_file "${qemu_kernel_pkg}" "qemu_kernel" "${output_dir}/tmp"
 		cp ${output_dir}/tmp/${qemu_kernel_pkg##*/} ${output_dir_base}/cache/
 	fi
@@ -613,19 +616,19 @@ then
 		sleep 1
 		if [ -e ${output_dir_base}/cache/${sata_boot_stage1##*/} ]
 		then
-			fn_log_echo "Found SATA stage1 bootlaoder in cache. Just linking it locally now."
+			write_log "Found SATA stage1 bootlaoder in cache. Just linking it locally now."
 			ln -s ${output_dir_base}/cache/${sata_boot_stage1##*/} ${output_dir}/tmp/${sata_boot_stage1##*/}
 		else
-			fn_log_echo "SATA stage1 bootloader NOT found in cache. Getting it now and copying it to cache."
+			write_log "SATA stage1 bootloader NOT found in cache. Getting it now and copying it to cache."
 			get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
 			cp ${output_dir}/tmp/${sata_boot_stage1##*/} ${output_dir_base}/cache/
 		fi
 		if [ -e ${output_dir_base}/cache/${sata_uboot##*/} ]
 		then
-			fn_log_echo "Found SATA uboot bootlaoder in cache. Just linking it locally now."
+			write_log "Found SATA uboot bootlaoder in cache. Just linking it locally now."
 			ln -s ${output_dir_base}/cache/${sata_uboot##*/} ${output_dir}/tmp/${sata_uboot##*/}
 		else
-			fn_log_echo "SATA uboot bootloader NOT found in cache. Getting it now and copying it to cache."
+			write_log "SATA uboot bootloader NOT found in cache. Getting it now and copying it to cache."
 			get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
 			cp ${output_dir}/tmp/${sata_uboot##*/} ${output_dir_base}/cache/
 		fi
@@ -655,11 +658,11 @@ sync
 chown root:root ${output_dir}/mnt_debootstrap/lib/modules/ -R
 if [ -e ${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware ]
 then
-	fn_log_echo "Moving gmac-firmware file to the right position ('/lib/firmware')."
+	write_log "Moving gmac-firmware file to the right position ('/lib/firmware')."
 	mkdir -p ${output_dir}/mnt_debootstrap/lib/firmware/
 	mv ${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware ${output_dir}/mnt_debootstrap/lib/firmware/ 2>>${output_dir}/log.txt
 else
-	fn_log_echo "Could not find '${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware'. So, not moving it."
+	write_log "Could not find '${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware'. So, not moving it."
 fi
 
 if [ ! -z "${module_load_list}" ]
@@ -870,10 +873,10 @@ then
 		then
 			if [ -e ${output_dir_base}/cache/${extra_files_name} ]
 			then
-				fn_log_echo "Found extra file '${extra_files_name}' in cache. Just linking it locally now."
+				write_log "Found extra file '${extra_files_name}' in cache. Just linking it locally now."
 				ln -s ${output_dir_base}/cache/${extra_files_name} ${output_dir}/tmp/${extra_files_name}
 			else
-				fn_log_echo "Extra file '${extra_files_name}' NOT found in cache. Getting it now and copying it to cache."
+				write_log "Extra file '${extra_files_name}' NOT found in cache. Getting it now and copying it to cache."
 				get_n_check_file "${1}" "${extra_files_name}" "${output_dir}/tmp"
 				cp ${output_dir}/tmp/${extra_files_name} ${output_dir_base}/cache/
 			fi
@@ -881,25 +884,27 @@ then
 			get_n_check_file "${1}" "${extra_files_name}" "${output_dir}/tmp"
 		fi
 		
-		tar_all extract "${output_dir}/tmp/${extra_files_name}" "${output_dir}/mnt_debootstrap"
+		tar_all extract "${output_dir}/tmp/${extra_files_name}" "${output_dir}/mnt_debootstrap/"
 		if [ "$?" = "0" ]
 		then
-			fn_log_echo "Successfully extracted '${extra_files_name}' into the created rootfs."
+			write_log "Successfully extracted '${extra_files_name}' into the created rootfs."
 		else
-			fn_log_echo "ERROR while trying to extract '${extra_files_name}' into the created rootfs!"
+			write_log "ERROR: While trying to extract '${extra_files_name}' into the created rootfs an error occurred!
+Function 'tar_all extract' rerurned error code '$?'."
 		fi
 		shift
 	done
 else
-	fn_log_echo "Variable 'extra_files' appears to be empty. No additional files extracted into the completed rootfs."
+	write_log "Variable 'extra_files' appears to be empty. No additional files extracted into the completed rootfs."
 fi
 
 umount_img all
 if [ "$?" = "0" ]
 then
-	fn_log_echo "Filesystem image file successfully unmounted. Ready to continue."
+	write_log "Filesystem image file successfully unmounted. Ready to continue."
 else
-	fn_log_echo "Error while trying to unmount the filesystem image. Exiting now!"
+	write_log "ERROR: While trying to unmount the filesystem image an error occured.
+Function 'umount_img all' returned error code '$?'. Exiting now!"
 	exit 50
 fi
 
@@ -908,14 +913,15 @@ sleep 5
 mount |grep "${output_dir}/mnt_debootstrap" > /dev/null
 if [ ! "$?" = "0" ]
 then
-	fn_log_echo "Starting the qemu environment now!"
+	write_log "Starting the qemu environment now!"
 	qemu-system-arm -M versatilepb -cpu arm926 -no-reboot -kernel ${output_dir}/qemu-kernel/zImage -hda ${output_dir}/${output_filename}.img -m 256 -append "root=/dev/sda rootfstype=${rootfs_filesystem_type} mem=256M rw" 2>qemu_error_log.txt
 else
-	fn_log_echo "ERROR! Filesystem is still mounted. Can't run qemu!"
+	write_log "ERROR: Filesystem is still mounted. Can't run qemu!
+'qemu-system-arm' returned error code '$?'. Exiting now!"
 	exit 51
 fi
 
-fn_log_echo "Additional chroot system configuration successfully finished!"
+write_log "Additional chroot system configuration successfully finished!"
 
 }
 
@@ -923,7 +929,7 @@ fn_log_echo "Additional chroot system configuration successfully finished!"
 # Description: Compress the resulting rootfs
 compress_rootfs()
 {
-fn_log_echo "Compressing the rootfs now!"
+write_log "Compressing the rootfs now!"
 
 mount |grep ${output_dir}/${output_filename}.img 2>/dev/null
 if [ ! "$?" = "0" ]
@@ -931,14 +937,16 @@ then
 	fsck.${rootfs_filesystem_type} -fy ${output_dir}/${output_filename}.img
 	if [ "$?" = "0" ]
 	then
-		fn_log_echo "Temporary filesystem checked out, OK!"
+		write_log "Temporary filesystem checked out, OK!"
 	else
-		fn_log_echo "ERROR: State of Temporary filesystem is NOT OK! Exiting now."
+		write_log "ERROR: State of Temporary filesystem is NOT OK!
+'fsck.${rootfs_filesystem_type}' returned error code '$?'. Exiting now."
 		regular_cleanup
 		exit 24
 	fi
 else
-	fn_log_echo "ERROR: Image file still mounted. Exiting now!"
+	write_log "ERROR: Image file still mounted.
+'mount' returned error code '$?'. Exiting now!"
 	regular_cleanup
 	exit 25
 fi
@@ -954,14 +962,15 @@ then
 	then
 		tar_all compress "${output_dir}/${output_filename}.tar.${tar_format}" .
 	else
-		fn_log_echo "Incorrect setting '${tar_format}' for the variable 'tar_format' in the general_settings.sh.
+		write_log "Incorrect setting '${tar_format}' for the variable 'tar_format' in the general_settings.sh.
 Please check! Only valid entries are 'bz2' or 'gz'. Could not compress the Rootfs!"
 	fi
 
 	cd ${output_dir}
 	sleep 5
 else
-	fn_log_echo "ERROR: Image file could not be remounted correctly. Exiting now!"
+	write_log "ERROR: Image file could not be remounted correctly.
+'mount' returned error code '$?'- Exiting now!"
 	regular_cleanup
 	exit 26
 fi
@@ -976,17 +985,17 @@ then
 	rm ${output_dir}/${output_filename}.img
 elif [ "$?" = "0" ] && [ "${clean_tmp_files}" = "yes" ]
 then
-	fn_log_echo "Directory '${qemu_mnt_dir}' is still mounted, so it can't be removed. Exiting now!"
+	write_log "Directory '${qemu_mnt_dir}' is still mounted, so it can't be removed. Exiting now!"
 	regular_cleanup
 	exit 27
 elif [ "$?" = "0" ] && [ "${clean_tmp_files}" = "no" ]
 then
-	fn_log_echo "Directory '${qemu_mnt_dir}' is still mounted, please check. Exiting now!"
+	write_log "Directory '${qemu_mnt_dir}' is still mounted, please check. Exiting now!"
 	regular_cleanup
 	exit 28
 fi
 
-fn_log_echo "Rootfs successfully DONE!"
+write_log "Rootfs successfully DONE!"
 }
 
 
@@ -1009,12 +1018,22 @@ then
 		then
 			tar -cpzf "${2}" "${3}"
 		else
-			fn_log_echo "ERROR! Created files can only be of type '.tar.gz', '.tgz', '.tbz2', or '.tar.bz2'! Exiting now!"
+			write_log "ERROR: Created files can only be of type '.tar.gz', '.tgz', '.tbz2', or '.tar.bz2'!
+Used call parameters were:
+1: '${1}'
+2: '${2}'
+3: '${3}'
+Exiting now!"
 			regular_cleanup
 			exit 37
 		fi
 	else
-		fn_log_echo "ERROR! Illegal arguments '$2' and/or '$3'. Exiting now!"
+		write_log "ERROR: Illegal arguments '2' and/or '3'.
+Used call parameters were:
+1: '${1}'
+2: '${2}'
+3: '${3}'
+Exiting now!"
 		regular_cleanup
 		exit 38
 	fi
@@ -1029,18 +1048,33 @@ then
 		then
 			tar -xpzf "${2}" -C "${3}"
 		else
-			fn_log_echo "ERROR! Can only extract files of type '.tar.gz', or '.tar.bz2'!
-'${2}' doesn't seem to fit that requirement. Exiting now!"
+			write_log "ERROR: Can only extract files of type '.tar.gz', or '.tar.bz2'!
+'${2}' doesn't seem to fit that requirement.
+Used call parameters were:
+1: '${1}'
+2: '${2}'
+3: '${3}'
+Exiting now!"
 			regular_cleanup
 			exit 39
 		fi
 	else
-		fn_log_echo "ERROR! Illegal arguments '$2' and/or '$3'. Exiting now!"
+		write_log "ERROR: Illegal arguments '2' and/or '3'.
+Used call parameters were:
+1: '${1}'
+2: '${2}'
+3: '${3}'
+Exiting now!"
 		regular_cleanup
 		exit 40
 	fi
 else
-	fn_log_echo "ERROR! The first parameter needs to be either 'compress' or 'extract', and not '$1'. Exiting now!"
+	write_log "ERROR: The first parameter needs to be either 'compress' or 'extract', and NOT '${1}'.
+Used call parameters were:
+1: '${1}'
+2: '${2}'
+3: '${3}'
+Exiting now!"
 	regular_cleanup
 	exit 41
 fi
@@ -1053,27 +1087,27 @@ umount_img()
 cd ${output_dir}
 if [ "${1}" = "sys" ] || [ "${1}" = "all" ]
 then
-	fn_log_echo "Function 'umount_img' called with parameter '$1'."
+	write_log "Function 'umount_img' called with parameter '$1'."
 	mount | grep "${qemu_mnt_dir}" >/dev/null
 	if [ "$?" = "0"  ]
 	then
-		fn_log_echo "Virtual Image still mounted. Trying to umount now!"
+		write_log "Virtual Image still mounted. Trying to umount now!"
 		sleep 2
-		fn_log_echo "Trying to unmount the 'proc' filesystem."
+		write_log "Trying to unmount the 'proc' filesystem."
 		umount ${qemu_mnt_dir}/proc 2>/dev/null
 		echo "Return value was '$?'."
 		sleep 10
-		fn_log_echo "Trying to unmount the 'pts' filesystem."
+		write_log "Trying to unmount the 'pts' filesystem."
 		umount ${qemu_mnt_dir}/dev/pts 2>/dev/null
 		echo "Return value was '$?'."
 		sleep 10
-		fn_log_echo "Trying to unmount the 'sys' filesystem."
+		write_log "Trying to unmount the 'sys' filesystem."
 		umount ${qemu_mnt_dir}/sys 2>/dev/null
 		echo "Return value was '$?'."
 		sleep 5
 		if [ "${1}" = "all" ]
 		then
-			fn_log_echo "Trying to unmount the 'qemu_rootfs' filesystem."
+			write_log "Trying to unmount the 'qemu_rootfs' filesystem."
 			umount ${qemu_mnt_dir}/ 2>/dev/null
 			echo "Return value was '$?'."
 			sleep 2
@@ -1089,19 +1123,21 @@ then
 		then
 			if [ "${1}" = "sys" ]
 			then
-				fn_log_echo "ERROR! Something went wrong. All subdirectories of '${output_dir}' should have been unmounted, but are not."
+				write_log "ERROR: Something went wrong. All subdirectories of '${output_dir}' should have been unmounted, but are not."
 			else
-				fn_log_echo "ERROR! Something went wrong. The complete '${qemu_mnt_dir}' directory, including subdirectories should have been unmounted, but is not."
+				write_log "ERROR: Something went wrong. The complete '${qemu_mnt_dir}' directory, including subdirectories should have been unmounted, but is not."
 			fi
 		else
-			fn_log_echo "Virtual image successfully unmounted."
+			write_log "Virtual image successfully unmounted."
 		fi
 	else
-		fn_log_echo "No virtual image seems to be mounted. So, no need to umount.
+		write_log "No virtual image seems to be mounted. So, no need to umount.
 Exiting function."
 	fi
 else
-	fn_log_echo "ERROR! Wrong parameter. Only 'sys' and 'all' allowed when calling 'umount_img'."
+	write_log "ERROR: Wrong parameter. Only 'sys' and 'all' allowed when calling 'umount_img'.
+Used call parameter was '${1}', however. Exiting now!"
+	exit 97
 fi
 cd ${output_dir}
 }
@@ -1122,19 +1158,19 @@ then
 
 	sed -i -e "s~${escaped_original}~${escaped_replacement}~g" ${file}
 else
-	fn_log_echo "ERROR! Trying to call the function 'sed_search_n_replace' with (a) wrong parameter(s). The following was used:
-'Param1='${1}'
-Param2='${2}'
-Param3='${3}'"
+	write_log "ERROR: Trying to call the function 'sed_search_n_replace' with (a) wrong/faulty parameter(s). The following was used:
+Param1=original='${1}'
+Param2=replacement='${2}'
+Param3=file='${3}'"
 fi
 sleep 1
 grep -F "${replacement}" "${file}" > /dev/null
 
 if [ "$?" = "0" ]
 then
-	fn_log_echo "String '${original}' was successfully replaced in file '${file}'."
+	write_log "String '${original}' was successfully replaced in file '${file}'."
 else
-	fn_log_echo "ERROR! String '${original}' could not be replaced in file '${file}'!"
+	write_log "ERROR: String '${original}' could not be replaced in file '${file}'!"
 fi
 
 }
@@ -1150,10 +1186,13 @@ output_path=${3}
 
 if [ -z "${1}" ] || [ -z "${2}" ] || [ -z "${3}" ]
 then
-	fn_log_echo "ERROR: Function get_n_check_file needs 3 parameters.
+	write_log "ERROR: Function get_n_check_file needs 3 parameters.
 Parameter 1 is file_path/file_name, parameter 2 is short_description and parameter 3 is output-path.
-Faulty parameters passed were '${1}', '${2}' and '${3}'.
-One or more of these appear to be empty. Exiting now!" 
+Faulty parameters passed were:
+file_path/file_name='${1}'
+short_descripton='${2}'
+output_path='${3}'.
+One or more of these appear to be empty! Exiting now!" 
 	regular_cleanup
 	exit 42
 fi
@@ -1166,7 +1205,7 @@ then
 		cd ${output_path}
 		if [ "${1:(-4):4}" = ".git" ]
 		then
-			fn_log_echo "Trying to clone repository ${short_description} from address '${1}', now."
+			write_log "Trying to clone repository ${short_description} from address '${1}', now."
 			success=0
 			for i in {1..10}
 			do
@@ -1188,56 +1227,56 @@ then
 			done
 			if [ "$success" = "1" ]
 			then
-				fn_log_echo "'${short_description}' repository successfully cloned from address '${1}'."
+				write_log "'${short_description}' repository successfully cloned from address '${1}'."
 			else
-				fn_log_echo "ERROR: Repository '${1}' could not be cloned.
+				write_log "ERROR: Repository '${1}' could not be cloned.
 Exiting now!"
 				regular_cleanup
 				exit 42
 			fi
 		else
-			fn_log_echo "Trying to download ${short_description} from address '${file_path}/${file_name}', now."
+			write_log "Trying to download ${short_description} from address '${file_path}/${file_name}', now."
 			wget -q --spider ${file_path}/${file_name}
 			if [ "$?" = "0" ]
 			then
 				wget -t 3 ${file_path}/${file_name}
 				if [ "$?" = "0" ]
 				then
-					fn_log_echo "'${short_description}' successfully downloaded from address '${file_path}/${file_name}'."
+					write_log "'${short_description}' successfully downloaded from address '${file_path}/${file_name}'."
 				else
-					fn_log_echo "ERROR: File '${file_path}/${file_name}' could not be downloaded.
-Exiting now!"
+					write_log "ERROR: File '${file_path}/${file_name}' could not be downloaded.
+'wget' returned error code '$?'. Exiting now!"
 					regular_cleanup
 					exit 43
 				fi
 			else
-				fn_log_echo "ERROR: '${file_path}/${file_name}' does not seem to be a valid internet address. Please check!
-Exiting now!"
+				write_log "ERROR: '${file_path}/${file_name}' does not seem to be a valid internet address. Please check!
+'wget' returned error code '$?'. Exiting now!"
 				regular_cleanup
 				exit 44
 			fi
 		fi
 	else
-		fn_log_echo "ERROR: Output directory '${output_path}' does not seem to exist. Please check!
-	Exiting now!"
+		write_log "ERROR: Output directory '${output_path}' does not seem to exist. Please check!
+Exiting now!"
 			regular_cleanup
 			exit 45
 	fi
 else
-	fn_log_echo "Looking for the ${short_description} locally (offline)."	
+	write_log "Looking for the ${short_description} locally (offline)."	
 	if [ -d ${file_path} ]
 	then
 		if [ -e ${file_path}/${file_name} ]
 		then
-			fn_log_echo "File is a local file '${file_path}/${file_name}', so it stays where it is."
+			write_log "File is a local file '${file_path}/${file_name}', so it stays where it is."
 			ln -s ${file_path}/${file_name} ${output_path}/${file_name}
 		else
-			fn_log_echo "ERROR: File '${file_name}' does not seem to be a valid file in existing directory '${file_path}'.Exiting now!"
+			write_log "ERROR: File '${file_name}' does not seem to be a valid file in existing directory '${file_path}'.Exiting now!"
 			regular_cleanup
 			exit 47
 		fi
 	else
-		fn_log_echo "ERROR: Folder '${file_path}' does not seem to exist as a local directory. Exiting now!"
+		write_log "ERROR: Folder '${file_path}' does not seem to exist as a local directory. Exiting now!"
 		regular_cleanup
 		exit 48
 	fi
@@ -1249,13 +1288,16 @@ cd ${output_dir}
 # Description: Helper function to clean up in case of an interrupt
 int_cleanup() # special treatment for script abort through interrupt ('ctrl-c'  keypress, etc.)
 {
-	fn_log_echo "Build process interrupted. Now trying to clean up!"
+	write_log "Build process interrupted. Now trying to clean up!"
 	umount_img all 2>/dev/null
 	rm -r ${qemu_mnt_dir} 2>/dev/null
-	rm -r ${output_dir}/tmp 2>/dev/null
+	if [ "${clean_tmp_files}" = "yes" ]
+	then
+		rm -r ${output_dir}/tmp 2>/dev/null
+	fi
 	rm -r ${output_dir}/drive 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
-	fn_log_echo "Exiting script now!"
+	write_log "Exiting script now!"
 	exit 99
 }
 
@@ -1264,7 +1306,10 @@ regular_cleanup() # cleanup for all other error situations
 {
 	umount_img all 2>/dev/null
 	rm -r ${qemu_mnt_dir} 2>/dev/null
-	rm -r ${output_dir}/tmp 2>/dev/null
+	if [ "${clean_tmp_files}" = "yes" ]
+	then
+		rm -r ${output_dir}/tmp 2>/dev/null
+	fi
 	rm -r ${output_dir}/drive 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
 }
