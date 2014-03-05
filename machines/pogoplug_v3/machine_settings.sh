@@ -57,7 +57,7 @@ rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs b
 
 extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplug_v3_arch_ledcontrol.tar.bz2" # some extra archives (list seperated by a single blank space!) that get extracted into the rootfs, when done (for example original led control program and original arch linux kernel modules)
 
-qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.13-versatile-ppv3-qemu.1.0.tar.bz2" # qemu kernel file name
+qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.13.4-qemu-ppv3-1.0.tar.bz2" # qemu kernel file name
 
 std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.12.13-ppv3-classic-armv6k-1.0-gf80a7ad-dirty.tar.bz2" # std kernel file name
 
