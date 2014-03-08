@@ -43,6 +43,7 @@ machine_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT
 console_device="ttyS0" # Device used for the serial console (usually 'ttyS0')
 console_baudrate="115200" # Baudrate to use for the serial console (often '115200')
 
+machine_debootstrap_arch="armel" # Architecture setting for debootstrap. For example 'armel' for ARMv5 and 'armhf' for ARMv7.
 deb_add_packages="apt-utils,dialog,locales,emdebian-archive-keyring,debian-archive-keyring" # packages to directly include in the first debootstrap stage
 additional_packages="mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
 additional_wireless_packages="wireless-tools wpasupplicant" # packages for wireless lan; mostly for the Pogoplug V3 Pro
@@ -70,7 +71,23 @@ std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.12.13-
 
 work_image_size_MB="512" # size of the temporary image file, in which the installation process is carried out
 
-machine_qemu_command="qemu-system-arm -M versatilepb -cpu arm926 -no-reboot -kernel ${output_dir}/qemu-kernel/zImage -hda ${output_dir}/${output_filename}.img -m 256 -append \"root=/dev/sda rootfstype=${rootfs_filesystem_type} mem=256M rw\""
+
+##########################
+##### QEMU SETTINGS: #####
+##########################
+
+qemu_arch="arm" # What base architecture do you need qemu to emulate? For example 'arm'.
+
+qemu_machine_type="versatilepb" # What specific, supported machine should qemu emulate?
+
+qemu_cpu_type="arm926" # What specific cpu-type should be emulated?
+
+qemu_mem_size="256" # How much RAM to hand to the qemu cirtual system?
+
+qemu_hdd_mount="-hda ${output_dir}/${output_filename}.img" # How to use the rootfs image in qemu? For example as IDE disk '-hda xxx.img'.
+
+qemu_kernel_cmdline="root=/dev/sda rootfstype=${rootfs_filesystem_type} mem=256M rw" # What commandline to pass to the qemu-kernel, when running the virtual qemu system?
+
 
 
 

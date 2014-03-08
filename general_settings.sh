@@ -42,9 +42,9 @@ machine_id="pogoplug-v3"
 ##### GENERAL BUILD SETTINGS: #####
 ###################################
 
-host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!) The system you are running THIS script on!
+host_os="Debian" # Debian or Ubuntu (YOU NEED TO EDIT THIS!) The system you are running THIS script on!
 
-build_target="emdebian" # possible settings are either 'debian' or 'emdebian'
+build_target="emdebian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
 build_target_version="testing" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
 target_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror address for debian or emdebian
 target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
@@ -83,11 +83,11 @@ tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
 
 qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesystem will be mounted
 
-base_sys_cache_tarball="${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
+base_sys_cache_tarball="${machine_id}_${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
 
 ### Check these very carefully, if you experience errors while running 'check_n_install_prerequisites'
-apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-kvm qemu-system-arm parted e2fsprogs" # packages needed for the build process on debian
-apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system qemu-kvm parted e2fsprogs" # packages needed for the build process on ubuntu
+apt_prerequisites_debian="sgabios emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on debian
+apt_prerequisites_ubuntu="sgabios debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on ubuntu
 
 
 ### GENERAL NETWORK SETTINGS ###

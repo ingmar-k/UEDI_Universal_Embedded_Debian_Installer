@@ -171,11 +171,40 @@ Please run 'build_emdebian_debian_system.sh --help' for more information"
 	exit 12
 fi
 
-if [ "$1" = "uninstall" ]
+if [ "${1}" = "uninstall" ]
 then
-		echo "Uninnstalling the prerequisites, now."
-		apt-get remove ${apt_prerequisites}
-		echo "DONE!"
+		echo "Trying to uninnstall the prerequisites, now."
+		echo "Be VERY careful not to remove any system packages!
+____________________________________________________
+		
+!!!!! READ THE APT HINTS VERY CAREFULLY, PLEASE !!!!!
+____________________________________________________"
+
+		set -- ${apt_prerequisites}
+		while [ $# -gt 0 ]
+		do
+			if [ "${1}" = "parted" ] ### parted is a special case, as a lot of system packages depend on it. It would probably be dangerous to remove it, as it would  also remove essential system packages.
+			then
+				shift
+				continue
+			fi
+			apt-get remove ${1}
+			if [ "$?" = "0" ]
+			then
+				sleep 3
+				echo "
+				Package '${1}' successfully uninstalled.
+				"
+			else
+				sleep 3
+				echo "
+				Package '${1}' could not be uninstalled.
+'apt-get remove' returned errror code '$?'.
+"
+			fi
+			echo "DONE!"
+			shift
+		done
 else	
 	check_connectivity
 
@@ -347,12 +376,12 @@ then
 		if [ -e "${output_dir_base}/cache/${base_sys_cache_tarball}" ]
 		then
 			write_log "Using emdebian/debian debootstrap tarball '${output_dir_base}/cache/${base_sys_cache_tarball}' from cache."
-			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
+			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=${machine_debootstrap_arch} --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
 		else
 			write_log "No debian/emdebian debootstrap tarball found in cache. Creating one now!"
-			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --make-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${output_dir_base}/cache/tmp/" "${target_mirror_url}"
+			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --make-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=${machine_debootstrap_arch} --variant=minbase "${build_target_version}" "${output_dir_base}/cache/tmp/" "${target_mirror_url}"
 			sleep 3
-			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
+			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=${machine_debootstrap_arch} --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
 		fi
 	fi
 else
@@ -516,24 +545,24 @@ if [ "${use_cache}" = "yes" ]
 then
 	if [ -z "${wireless_interface}" ]
 	then
-		if [ -e ${output_dir_base}/cache/additional_packages.tar.bz2 ]
+		if [ -e ${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2 ]
 		then
-			write_log "Extracting the additional packages 'additional_packages.tar.bz2' from cache. now."
-			tar_all extract "${output_dir_base}/cache/additional_packages.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
-		elif [ ! -e "${output_dir}/cache/additional_packages.tar.bz2" ]
+			write_log "Extracting the additional packages 'additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2' from cache. now."
+			tar_all extract "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
+		elif [ ! -e "${output_dir}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2" ]
 		then
-			write_log "No compressed additional_packages archive found in cache directory.
+			write_log "No compressed 'additional_packages_${machine_id}_${build_target}_${build_target_version}' archive found in cache directory.
 Creating it now!"
 			add_pack_create="yes"
 		fi
 	else
-		if [ -e ${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2 ]
+		if [ -e ${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2 ]
 		then
-			write_log "Extracting the additional packages 'additional_packages_including_wireless.tar.bz2' from cache. now."
-			tar_all extract "${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
-		elif [ ! -e "${output_dir}/cache/additional_packages_including_wireless.tar.bz2" ]
+			write_log "Extracting the additional packages 'additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2' from cache. now."
+			tar_all extract "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
+		elif [ ! -e "${output_dir}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2" ]
 		then
-			write_log "No compressed additional_packages_including_wireless archive found in cache directory.
+			write_log "No compressed additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless archive found in cache directory.
 Creating it now!"
 			add_pack_create="yes"
 		fi
@@ -583,7 +612,8 @@ tmpfs		/var/log	tmpfs	defaults,noatime,mode=0755	0	0
 END
 
 sed -i 's/^\([1-6]:.* tty[1-6]\)/#\1/' /etc/inittab 2>>/debootstrap_stg2_errors.txt
-echo '#T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt102' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
+echo '#T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
+#echo 'T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
 
 rm /debootstrap_pt2.sh
 exit 0" > ${qemu_mnt_dir}/debootstrap_pt2.sh
@@ -610,9 +640,9 @@ then
 	cd ${qemu_mnt_dir}/var/cache/apt/
 	if [ -z "${wireless_interface}" ]
 	then
-		tar_all compress "${output_dir_base}/cache/additional_packages.tar.bz2" .
+		tar_all compress "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2" .
 	else
-		tar_all compress "${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2" .
+		tar_all compress "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2" .
 	fi
 	write_log "Successfully created compressed cache archive of additional packages."
 	cd ${output_dir}
@@ -915,18 +945,20 @@ mount |grep "${output_dir}/mnt_debootstrap" > /dev/null
 if [ ! "$?" = "0" ]
 then
 	write_log "Starting the qemu environment now!"
-	${machine_qemu_command} 2>qemu_error_log.txt
+	qemu-system-${qemu_arch} -M ${qemu_machine_type} -cpu ${qemu_cpu_type} -no-reboot -kernel ${output_dir}/qemu-kernel/zImage ${qemu_hdd_mount} -m ${qemu_mem_size} -append "${qemu_kernel_cmdline}" 2>qemu_error_log.txt
 	if [ "$?" = "0" ]
 	then
 		write_log "'qemu-system-arm' seems to have closed cleanly. DONE!"
 	else
 		write_log "ERROR: '${machine_qemu_command}' returned error code '$?'.
 Exiting now!"
+		regular_cleanup
 		exit 51
 	fi
 else
 	write_log "ERROR: Filesystem is still mounted. Can't run qemu!
 'qemu-system-arm' returned error code '$?'. Exiting now!"
+	regular_cleanup
 	exit 52
 fi
 

@@ -96,108 +96,120 @@ if [ "${boot_directly_via_sata}" = "yes" ]
 then
 	write_log "Direct SATA boot is enabled. Preparing drive for SATA boot, now."
 fi
-device=""
+
+device="" # initalize 'device' as empty variable, to make sure
 echo "Now listing all available devices:
 "
 
 while [ -z "${device}" ]
 do
-parted -l
+	parted -l
 
-echo "
-Please enter the name of the USB drive device (eg. /dev/sdb) OR press ENTER to refresh the device list:"
+	read -t 30 -p "
+__________________________________________________
 
-read device
-if [ -e ${device} ] &&  [ "${device:0:5}" = "/dev/" ]
-then
-	umount ${device}* 2>/dev/null
-	mount |grep ${device} >/dev/null
-	if [ ! "$?" = "0" ]
+Please enter the name of the drive/card device (eg. /dev/sdb) OR press ENTER to refresh the device list:
+__________________________________________________
+
+" device
+
+	if [ ! -z "${device}" -a -e ${device} -a "${device:0:5}" = "/dev/" ]
 	then
-		echo "${device} partition table:"
-		parted -s ${device} unit MB print
-		echo "If you are sure that you want to repartition device '${device}', then type 'yes'.
-Type anything else and/or hit Enter to cancel!"
-		read affirmation
-		if [ "${affirmation}" = "yes" ]
+		umount ${device}* 2>/dev/null
+		mount |grep ${device} >/dev/null
+		if [ ! "$?" = "0" ]
 		then
-			if [ ! "${boot_directly_via_sata}" = "yes" ]
-			then 
-				if [ ! -z "${size_swap_partition}" ]
-				then
-					write_log "USB drive device set to '${device}', according to user input."
-					parted -s ${device} mklabel msdos
-					if [ ! -z "${size_wear_leveling_spare}" ]
+			echo "'${device}' partition table:"
+			parted -s ${device} unit MB print
+			read -t 60 -p "
+__________________________________________________
+		
+If you are sure that you want to repartition device '${device}', then please type 'yes'.
+Type anything else and/or hit Enter to cancel:
+__________________________________________________
+
+" affirmation
+			if [ ! -z "${affirmation}" -a "${affirmation}" = "yes" ]
+			then
+				if [ ! "${boot_directly_via_sata}" = "yes" ]
+				then 
+					if [ ! -z "${size_swap_partition}" ]
 					then
-						# first partition = root (ext3/ext4, size = rest of drive )
-						parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
-						# last partition = swap (swap, size = ${size_swap_partition} )
-						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
+						write_log "USB drive device set to '${device}', according to user input."
+						parted -s ${device} mklabel msdos
+						if [ ! -z "${size_wear_leveling_spare}" ]
+						then
+							# first partition = root (ext3/ext4, size = rest of drive )
+							parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
+							# last partition = swap (swap, size = ${size_swap_partition} )
+							parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
+						else
+							# first partition = root (ext3/ext4, size = rest of drive )
+							parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -${size_swap_partition}
+							# last partition = swap (swap, size = ${size_swap_partition} )
+							parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0
+						fi
+						echo ">>> ${device} Partition table is now:"
+						parted -s ${device} unit MiB print
 					else
-						# first partition = root (ext3/ext4, size = rest of drive )
-						parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} ${size_alignment} -${size_swap_partition}
-						# last partition = swap (swap, size = ${size_swap_partition} )
-						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0
-					fi
-					echo ">>> ${device} Partition table is now:"
-					parted -s ${device} unit MiB print
-				else
-					write_log "ERROR: The setting for 'size_swap_partition' seems to be empty.
+						write_log "ERROR: The setting for 'size_swap_partition' seems to be empty.
 Exiting now!"
-					regular_cleanup
-					exit 29
+						regular_cleanup
+						exit 29
+					fi
+				else
+					if [ ! -z "${size_swap_partition}" ]
+					then
+						write_log "SATA drive device set to '${device}', according to user input."
+						parted -s ${device} mklabel msdos
+						if [ ! -z "${size_wear_leveling_spare}" ]
+						then
+							# first (implicit) partition for bootloader = 2048 sectors = 1MB
+							# second partition for kernel
+							parted -s --align=opt -- ${device} unit MiB mkpart primary 1 9 # 8MB second partition at the beginning of the drive for the kernel
+							# third partition = root (ext3/ext4, size = rest of drive )
+							parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} 9 -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
+							# last partition = swap (swap, size = ${size_swap_partition} )
+							parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
+						else
+							# first (implicit) partition for bootloader = 2048 sectors = 1MB
+							# second partition for kernel
+							parted -s --align=opt -- ${device} unit MiB mkpart primary 1 9 # 16MB second partition at the beginning of the drive
+							# third partition = root (ext3/ext4, size = rest of drive )
+							parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} 9 -${size_swap_partition}
+							# last partition = swap (swap, size = ${size_swap_partition} )
+							parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0
+						fi
+						echo ">>> ${device} Partition table is now:"
+						parted -s ${device} unit MiB print
+					else
+						write_log "ERROR: The setting for 'size_swap_partition' seems to be empty.
+Exiting now!"
+						regular_cleanup
+						exit 29
+					fi
 				fi
 			else
-				if [ ! -z "${size_swap_partition}" ]
-				then
-					write_log "SATA drive device set to '${device}', according to user input."
-					parted -s ${device} mklabel msdos
-					if [ ! -z "${size_wear_leveling_spare}" ]
-					then
-						# first (implicit) partition for bootloader = 2048 sectors = 1MB
-						# second partition for kernel
-						parted -s --align=opt -- ${device} unit MiB mkpart primary 1 9 # 8MB second partition at the beginning of the drive for the kernel
-						# third partition = root (ext3/ext4, size = rest of drive )
-						parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} 9 -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
-						# last partition = swap (swap, size = ${size_swap_partition} )
-						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
-					else
-						# first (implicit) partition for bootloader = 2048 sectors = 1MB
-						# second partition for kernel
-						parted -s --align=opt -- ${device} unit MiB mkpart primary 1 9 # 16MB second partition at the beginning of the drive
-						# third partition = root (ext3/ext4, size = rest of drive )
-						parted -s --align=opt -- ${device} unit MiB mkpart primary ${rootfs_filesystem_type} 9 -${size_swap_partition}
-						# last partition = swap (swap, size = ${size_swap_partition} )
-						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0
-					fi
-					echo ">>> ${device} Partition table is now:"
-					parted -s ${device} unit MiB print
-				else
-					write_log "ERROR: The setting for 'size_swap_partition' seems to be empty.
-Exiting now!"
-					regular_cleanup
-					exit 29
-				fi
+				write_log "Action canceled by user, or timed out.
+Exiting now!
+You can rerun the drive creation (only) by using the '--install' or '-i' call parameter of this script!
+Just run 'sudo ./build_emdebian_debian_system.sh --help' for more information."
+				regular_cleanup
+				exit 29
 			fi
 		else
-			write_log "Action canceled by user. Exiting now!"
+			write_log "ERROR: Some partition on device '${device}' is still mounted.
+Exiting now!"
 			regular_cleanup
-			exit 29
+			exit 30
 		fi
 	else
-		write_log "ERROR: Some partition on device '${device}' is still mounted.
-Exiting now!"
-		regular_cleanup
-		exit 30
+		if [ ! -z "${device}" ] # in case of a refresh we don't want to see the error message ;-)
+		then 
+			write_log "ERROR: Device '${device}' doesn't seem to be a valid device!"
+		fi
+		device=""
 	fi
-else
-	if [ ! -z "${device}" ] # in case of a refresh we don't want to see the error message ;-)
-	then 
-		write_log "ERROR: Device '${device}' doesn't seem to be a valid device!"
-	fi
-	device=""
-fi
-
 done
 
 if [ ! "${boot_directly_via_sata}" = "yes" ]
@@ -251,7 +263,7 @@ partprobe
 # Description: Copy rootfs and kernel-modules to the drive and then unmount it
 finalize_disk()
 {
-if [ -e ${device} ] &&  [ "${device:0:5}" = "/dev/" ]
+if [ ! -z "${device}" -a -e ${device} -a "${device:0:5}" = "/dev/" ]
 then
 	umount ${device}* 2>/dev/null
 	sleep 3
