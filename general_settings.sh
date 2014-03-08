@@ -17,30 +17,42 @@
 # Reading the file 'README.md' is also highly recommended!
 
 
-#########################
-##### MACHINE NAME: #####
-#########################
+##########################################
+######### SETTING FOR DEBUG MODE #########
+##########################################
+#
+DEBUG="0" # Set to '1' to see all commands, while the script is running. Set to '0' to disable that output.
+#
+##########################################
+##########################################
 
-machine_id="pogoplug_v3"
 
-#########################
-#########################
+##################################
+######### MACHINE NAME: ##########
+## SET YOUR TARGET MACHINE HERE ##
+##################################
+###
+machine_id="pogoplug-v3"
+###
+##################################
+##################################
 
 
 ###################################
 ##### GENERAL BUILD SETTINGS: #####
 ###################################
 
-host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!) The system you are running THIS scrip on!
+host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!) The system you are running THIS script on!
 
 build_target="emdebian" # possible settings are either 'debian' or 'emdebian'
-build_target_version="wheezy" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
+build_target_version="testing" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
 target_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror address for debian or emdebian
 target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
-output_dir_base="/home/${LOG_NAME}/${machine_id}_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
 current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
-########## A necessary check for output_dir #############
+output_filename="${build_target}_rootfs_${machine_id}_${current_date}" # base name of the output file (compressed rootfs)
+output_dir_base="/home/${LOG_NAME}/${machine_id}_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
+########## Necessary check and setting output_dir #############
 echo ${output_dir_base} |grep '//' >/dev/null
 if [ "$?" = "0" ]
 then
@@ -54,16 +66,11 @@ then
 else
 	output_dir="${output_dir_base}/build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
 fi
-##########################################################
+##################################################################
 
 root_password="root" # password for the Debian or Emdebian root user
 username="tester"  # Name of the normal user for the target system
 user_password="tester" # password for the user of the target system
-
-# ATTENTION: Your kernel has to support the filesystem-type that you specify here. Otherwise the Pogoplug won't boot.
-# ALSO, please check the Uboot Environment Variable 'bootargs' !!!
-# The part 'rootfstype=' has to reflect the filesystem that your created USB drive uses!
-# AND your specified (and flashed!) kernel has to have support for that file system (compiled in, NOT as module!!!)
 
 
 ### These settings are for experienced users ###
@@ -83,6 +90,18 @@ apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qe
 apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system qemu-kvm parted e2fsprogs" # packages needed for the build process on ubuntu
 
 
+### GENERAL NETWORK SETTINGS ###
+hostname="${machine_id}-${build_target}" # Name that the Emdebian system uses to identify itself on the network
+nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO CHECK THIS!!!)
+
+### Settings for compressed SWAP space in RAM ### 
+
+use_compressed_swapspace="yes" # Do you want to use a compressed SWAP space in RAM (can potentionally improve performance)?
+compressed_swapspace_module_name="zram" # name of the kernel module for compressed swapspace in RAM (could either be called 'ramzswap' or 'zram', depending on your kernel)
+compressed_swapspace_size_MB="32" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
+vm_swappiness="" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
+
+
 ####################################
 ##### SPECIFIC BUILD SETTINGS: #####
 ####################################
@@ -94,13 +113,8 @@ create_disk="yes" # create a bootable USB thumb drive after building the rootfs?
 use_cache="yes" # use or don't use caching for the apt and debootstrap processes (caching can speed things up, but it can also lead to problems)
 
 
-####################################
-##### "INSTALL ONLY" SETTINGS: #####
-####################################
-
-default_rootfs_package="" # filename of the default rootfs-archive for the '--install' call parameter
-
 ###########################################################
+####### NOW INCLUDING ALL NECESSARY MACHINE FILES #########
 ###########################################################
 if [ ! -z "${machine_id}" -a -d ./machines/${machine_id} -a -f ./machines/${machine_id}/machine_settings.sh -a -f ./machines/${machine_id}/machine_functions.sh ]
 then

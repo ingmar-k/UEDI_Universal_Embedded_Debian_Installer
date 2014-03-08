@@ -25,6 +25,70 @@
 ########################################################################
 
 
+############################################################
+################# Check for debugging mode #################
+######### And activate it, if set in settings file #########
+############################################################
+if [ "${DEBUG}" = "1" ]
+then
+	set -xv # set verbose mode and show executed commands 
+fi
+############################################################
+############################################################
+
+
+do_post_debootstrap_config_machine()
+{
+write_log "Starting machine specific post-debootstrap configuration steps."
+
+if [ "${use_cache}" = "yes" ]
+then
+	if [ "${boot_directly_via_sata}" = "yes" ]
+	then
+		tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
+		sleep 1
+		if [ -e ${output_dir_base}/cache/${sata_boot_stage1##*/} ]
+		then
+			write_log "Found SATA stage1 bootlaoder in cache. Just linking it locally now."
+			ln -s ${output_dir_base}/cache/${sata_boot_stage1##*/} ${output_dir}/tmp/${sata_boot_stage1##*/}
+		else
+			write_log "SATA stage1 bootloader NOT found in cache. Getting it now and copying it to cache."
+			get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
+			cp ${output_dir}/tmp/${sata_boot_stage1##*/} ${output_dir_base}/cache/
+		fi
+		if [ -e ${output_dir_base}/cache/${sata_uboot##*/} ]
+		then
+			write_log "Found SATA uboot bootlaoder in cache. Just linking it locally now."
+			ln -s ${output_dir_base}/cache/${sata_uboot##*/} ${output_dir}/tmp/${sata_uboot##*/}
+		else
+			write_log "SATA uboot bootloader NOT found in cache. Getting it now and copying it to cache."
+			get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
+			cp ${output_dir}/tmp/${sata_uboot##*/} ${output_dir_base}/cache/
+		fi
+	fi
+else
+	if [ "${boot_directly_via_sata}" = "yes" ]
+	then
+		tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
+		sleep 1
+		get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
+		get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
+	fi
+fi
+
+if [ -e ${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware ]
+then
+	write_log "Moving gmac-firmware file to the right position ('/lib/firmware')."
+	mkdir -p ${output_dir}/mnt_debootstrap/lib/firmware/
+	mv ${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware ${output_dir}/mnt_debootstrap/lib/firmware/ 2>>${output_dir}/log.txt
+else
+	write_log "Could not find '${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware'. So, not moving it."
+fi
+
+write_log "Machine specific, additional chroot system configuration successfully finished!"
+
+}
+
 
 partition_n_format_disk()
 {
@@ -244,8 +308,7 @@ Exiting now!"
 		if [ "$?" = "0" ]
 		then
 			write_log "drive successfully created!
-You can remove the drive now
-and try it with your pogoplug-V3.
+You can remove the drive now and try it with your pogoplug-V3.
 ALL DONE!"
 		else
 			write_log "ERROR: Filesystem check on your card returned an error status. Maybe your card is going bad, or something else went wrong.

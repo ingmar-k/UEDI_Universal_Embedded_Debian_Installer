@@ -6,6 +6,17 @@
 # This program (including documentation) is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.
 
+############################################################
+################# Check for debugging mode #################
+######### And activate it, if set in settings file #########
+############################################################
+if [ "${DEBUG}" = "1" ]
+then
+	set -xv # set verbose mode and show executed commands 
+fi
+############################################################
+############################################################
+
 
 #####################################
 ##### MAIN Highlevel Functions: #####
@@ -77,8 +88,9 @@ check_priviliges()
 {
 if [[ $UID -ne 0 ]]
 then
-	echo "$0 must be run as root/superuser (su, sudo etc.)!
-Please try again with the necessary priviliges."
+	echo "ERROR:
+'$0' must be run as root/superuser (su/sudo)!
+Please try again with the necessary priviliges!!!"
 	exit 10
 fi
 }
@@ -91,14 +103,13 @@ write_log()
 	then
 		if [ ! "${1:0:6}" = "ERROR:" ]
 		then
-			echo "`date`:   ${1}
-------------------------------------------------------------" >> ${output_dir}/std_log.txt
-			echo "${1}"
+			log_destination="${output_dir}/std_log.txt"
 		else
-			echo "`date`:   ${1}
-------------------------------------------------------------" >> ${output_dir}/error_log.txt
-			echo "${1}"
-		fi
+			log_destination="${output_dir}/error_log.txt"
+		fi		
+		echo "`date`:   ${1}
+------------------------------------------------------------" >> ${log_destination}
+		echo "${1}"
 	else
 		echo "Output directory '${output_dir}' doesn't exist. Exiting now!"
 		exit 11
@@ -110,33 +121,37 @@ write_log()
 check_connectivity()
 {
 write_log "Checking internet connectivity, which is mandatory for the next step."
-for i in {1..5}
+for i in google.com kernel.org debian.org ubuntu.com linuxmint.com
 do
-	for i in google.com kernel.org debian.org ubuntu.com linuxmint.com
+	for j in {1..5}
 	do
-		ping -c 3 ${i}
-		if [ "$?" = "0" ]
+		if [ "${j}" = "1" ]
+		then
+			ping_error="0"
+		fi
+		ping -v -c 1 ${i}
+		if [ ! "$?" = "0" ]
 		then 
-			write_log "Pinging '${i}' worked. Internet connectivity seems fine."
-			done=1
-			break
-		else
-			write_log "ERROR: Pinging '${i}' did NOT work. Internet connectivity seems bad or you are not connected.
-Please check, if in doubt!"
-			if [ "${i}" = "kernel.org" ]
-			then
-				write_log "ERROR: All 3 ping attempts failed! You do not appear to be connected to the internet.
-Exiting now!"
-				exit 97
-			else	
-				continue
-			fi
+			ping_error=`expr ${ping_error} + 1`
 		fi
 	done
-if [ "${done}" = "1" ]
-then
-	break
-fi
+	if [ "${ping_error}" = "0" ]
+	then 
+		write_log "Pinging '${i}' worked. Internet connectivity seems fine."
+		#done=1
+		break
+	elif [ ! "${ping_error}" = "0" -a ! "${i}" = "linuxmint.com" ]
+	then
+		write_log "ERROR: Pinging '${i}' did NOT work. Internet connectivity seems bad or you are not connected.
+Ping encountered `expr ${ping_error} + 1` failed attempts, out of 5.
+Retrying now, with a new destination address!"
+	else
+		write_log "ERROR: All ping attempts failed!
+You do not appear to be connected to the internet,or your connection is really bad.
+Running the script this way will very likely fail!
+Exiting now!"
+		exit 97
+	fi
 done
 }
 
@@ -144,10 +159,6 @@ done
 # Description: See if the needed packages are installed and if the versions are sufficient
 check_n_install_prerequisites()
 {
-	
-check_connectivity
-
-write_log "Installing some packages, if needed."
 if [ "${host_os}" = "Debian" ]
 then
 	apt_prerequisites=${apt_prerequisites_debian}
@@ -155,71 +166,82 @@ elif [ "${host_os}" = "Ubuntu" ]
 then
 	apt_prerequisites=${apt_prerequisites_ubuntu}
 else
-	write_log "OS-Type '${host_os}' not correct.
-Please run 'build_debian_system.sh --help' for more information"
+	echo "OS-Type '${host_os}' not correct.
+Please run 'build_emdebian_debian_system.sh --help' for more information"
 	exit 12
 fi
 
-set -- ${apt_prerequisites}
+if [ "$1" = "uninstall" ]
+then
+		echo "Uninnstalling the prerequisites, now."
+		apt-get remove ${apt_prerequisites}
+		echo "DONE!"
+else	
+	check_connectivity
 
-while [ $# -gt 0 ]
-do
-	dpkg -l |grep "ii  ${1}" >/dev/null
-	if [ "$?" = "0" ]
-	then
-		write_log "Package '${1}' is already installed. Nothing to be done."
-	else
-		write_log "Package '${1}' is not installed yet.
-Trying to install it now!"
-		if [ ! "${apt_get_update_done}" = "true" ]
-		then
-			write_log "Running 'apt-get update' to get the latest package dependencies."
-			apt-get update
-			if [ "$?" = "0" ]
-			then
-				write_log "'apt-get update' ran successfully! Continuing..."
-				apt_get_update_done="true"
-			else
-				write_log "ERROR: Running 'apt-get update' returned an error code ( '$?' ). Exiting now."
-				exit 13
-			fi
-		fi
-		apt-get install -y ${1}
+	write_log "Installing some packages, if needed."
+	
+	set -- ${apt_prerequisites}
+
+	while [ $# -gt 0 ]
+	do
+		dpkg -l |grep "ii  ${1}" >/dev/null
 		if [ "$?" = "0" ]
 		then
-			write_log "'${1}' installed successfully!"
+			write_log "Package '${1}' is already installed. Nothing to be done."
 		else
-			write_log "ERROR: Running 'apt-get install' for '${1}' returned an error code ( '$?' )."
-			if [ "${host_os}" = "Ubuntu" ] && [ "${1}" = "qemu-system" ]
+			write_log "Package '${1}' is not installed yet.
+Trying to install it now!"
+			if [ ! "${apt_get_update_done}" = "true" ]
 			then
-				write_log "Assuming that you are running this on Ubuntu 10.XX, where the package 'qemu-system' doesn't exist.
-If your host system is not Ubuntu 10.XX based, this could lead to errors. Please check!"
+				write_log "Running 'apt-get update' to get the latest package dependencies."
+				apt-get update
+				if [ "$?" = "0" ]
+				then
+					write_log "'apt-get update' ran successfully! Continuing..."
+					apt_get_update_done="true"
+				else
+					write_log "ERROR: Running 'apt-get update' returned an error code ( '$?' ). Exiting now."
+					exit 13
+				fi
+			fi
+			apt-get install -y ${1}
+			if [ "$?" = "0" ]
+			then
+				write_log "'${1}' installed successfully!"
 			else
-				write_log "Exiting now!"
-				exit 14
+				write_log "ERROR: Running 'apt-get install' for '${1}' returned an error code ( '$?' )."
+				if [ "${host_os}" = "Ubuntu" ] && [ "${1}" = "qemu-system" ]
+				then
+					write_log "Assuming that you are running this on Ubuntu 10.XX, where the package 'qemu-system' doesn't exist.
+If your host system is not Ubuntu 10.XX based, this could lead to errors. Please check!"
+				else
+					write_log "Exiting now!"
+					exit 14
+				fi
 			fi
 		fi
-	fi
 
-	if [ $1 = "qemu-user-static" ]
-	then
-		sh -c "dpkg -l|grep \"qemu-user-static\"|grep \"1.\"" >/dev/null
-		if [ $? = "0" ]
+		if [ $1 = "qemu-user-static" ]
 		then
-			write_log "Sufficient version of package '${1}' found. Continueing..."
-		else
-			write_log "The installed version of package '${1}' is too old.
+			sh -c "dpkg -l|grep \"qemu-user-static\"|grep \"1.\"" >/dev/null
+			if [ $? = "0" ]
+			then
+				write_log "Sufficient version of package '${1}' found. Continueing..."
+			else
+				write_log "The installed version of package '${1}' is too old.
 You need to install a package with a version of at least 1.0.
 For example from the debian-testing ('http://packages.debian.org/search?keywords=qemu&searchon=names&suite=testing&section=all')
 respectively the Ubuntu precise ('http://packages.ubuntu.com/search?keywords=qemu&searchon=names&suite=precise&section=all') repositiories.
 Exiting now!"
-			exit 15
+				exit 15
+			fi
 		fi
-	fi
-	shift
-done
-
-write_log "Function 'check_n_install_prerequisites' DONE."
+		shift
+	done
+	
+	write_log "Function 'check_n_install_prerequisites' DONE."
+fi
 }
 
 
@@ -280,30 +302,42 @@ do_debootstrap()
 	
 check_connectivity
 
-if [ ! -e /usr/share/debootstrap/scripts/${build_target_version} ]
-then
-	write_log "Creating a symlink now, in order to make debootstrap work."
-	ln -s /usr/share/debootstrap/scripts/${build_target_version%-grip} /usr/share/debootstrap/scripts/${build_target_version}
-	if [ "$?" = "0" ]
-	then
-		write_log "Necessary debootstrap script symlink '/usr/share/debootstrap/scripts/${build_target_version%-grip}' successfully created!"
-	fi
-fi
-	
 write_log "Running first stage of debootstrap now."
 
 if [ "${build_target}" = "emdebian" ]
 then
-	build_target_version="${build_target_version}-grip"
-	if [ ! -f /usr/share/debootstrap/scripts/${build_target_version} ]
+	em_build_target_version="${build_target_version}-grip"
+	if [ -f /usr/share/debootstrap/scripts/${build_target_version} ]
 	then
-		write_log "Creating a symlink now, in order to make debootstrap work."
-		ln -s /usr/share/debootstrap/scripts/${build_target_version%-grip} /usr/share/debootstrap/scripts/${build_target_version}
-		if [ "$?" = "0" ]
+		if [ ! -f /usr/share/debootstrap/scripts/${em_build_target_version} ]
 		then
-			write_log "Debootstrap script symlink successfully created!"
+			write_log "Creating a symlink now, in order to make debootstrap work."
+			cd /usr/share/debootstrap/scripts/ && ln -s ${build_target_version} ${em_build_target_version}
+			if [ "$?" = "0" ]
+			then
+				write_log "Necessary debootstrap script symlink '/usr/share/debootstrap/scripts/${em_build_target_version}' successfully created!"
+			else
+				write_log "ERROR: Necessary symlink for the debootstrap scripts could NOT be created!
+	'ln -s' returned error code '$?'. Exiting now!"
+				regular_cleanup
+				exit 93
+			fi
+		else
+			write_log "Debootstrap symlink '/usr/share/debootstrap/scripts/${em_build_target_version}'
+already in place. Nothing to do." 
 		fi
+	else
+		write_log "ERROR:
+Debootstrap script file '/usr/share/debootstrap/scripts/${build_target_version}'
+could NOT be found! Exiting now!
+
+ls -alh /usr/share/debootstrap/scripts/:
+`ls -alh /usr/share/debootstrap/scripts/`
+"
+			regular_cleanup
+			exit 94
 	fi
+	build_target_version=${em_build_target_version} # For running debootstrap itself and the sources.list
 fi
 
 if [ "${use_cache}" = "yes" ]
@@ -315,7 +349,7 @@ then
 			write_log "Using emdebian/debian debootstrap tarball '${output_dir_base}/cache/${base_sys_cache_tarball}' from cache."
 			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
 		else
-			write_log "No debian debootstrap tarball found in cache. Creating one now!"
+			write_log "No debian/emdebian debootstrap tarball found in cache. Creating one now!"
 			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --make-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${output_dir_base}/cache/tmp/" "${target_mirror_url}"
 			sleep 3
 			debootstrap --foreign --keyring=/usr/share/keyrings/${build_target}-archive-keyring.gpg --unpack-tarball="${output_dir_base}/cache/${base_sys_cache_tarball}" --include=${deb_add_packages} --verbose --arch=armel --variant=minbase "${build_target_version}" "${qemu_mnt_dir}/" "${target_mirror_url}"
@@ -347,40 +381,58 @@ deb ${target_mirror_url} ${build_target_version} ${target_repositories}
 deb-src ${target_mirror_url} ${build_target_version} ${target_repositories}
 END
 
+if [ \"${build_target}\" = \"debian\" ]
+then
+	if [ \"${build_target_version}\" = \"stable\" ] || [ \"${build_target_version}\" = \"wheezy\" ] || [ \"${build_target_version}\" = \"testing\" ] || [ \"${build_target_version}\" = \"jessie\" ]
+	then
+		cat <<END >>/etc/apt/sources.list 2>>/debootstrap_stg2_errors.txt
+deb ${target_mirror_url} ${build_target_version}-updates ${target_repositories}
+deb-src ${target_mirror_url} ${build_target_version}-updates ${target_repositories}
+deb http://security.debian.org/ ${build_target_version}/updates ${target_repositories}
+deb-src http://security.debian.org/ ${build_target_version}/updates ${target_repositories}
+END
+	fi
+fi
+
 apt-get update
 
-mknod /dev/ttyS0 c 4 64	# for the serial console 2>>/debootstrap_stg2_errors.txt
+mknod /dev/${console_device} c 4 64	# for the serial console 2>>/debootstrap_stg2_errors.txt
 
-if [ \"${ip_type}\" = \"dhcp\" ]
-then
-	cat <<END > /etc/network/interfaces
-auto ${interfaces_auto}
+cat <<END > /etc/network/interfaces
+auto lo ${interfaces_auto}
 iface lo inet loopback
-iface eth0 inet dhcp
-hwaddress ether ${pogoplug_mac_address}
 END
-elif [ \"${ip_type}\" = \"static\" ]
+
+if [ ! -z \"${ethernet_interface}\" ]
 then
-	cat <<END > /etc/network/interfaces
-auto ${interfaces_auto}
-iface lo inet loopback
-iface eth0 inet static
+	if [ ! -z \"${machine_mac_address}\" ]
+	then
+		cat <<END >> /etc/network/interfaces
+hwaddress ether ${machine_mac_address}
+END
+	fi
+	if [ \"${ip_type}\" = \"dhcp\" ]
+	then
+		cat <<END >> /etc/network/interfaces
+iface ${ethernet_interface} inet dhcp
+END
+	elif [ \"${ip_type}\" = \"static\" ]
+	then
+		cat <<END >> /etc/network/interfaces
+iface ${ethernet_interface} inet static
 address ${static_ip}
 netmask ${netmask}
 gateway ${gateway_ip}
-hwaddress ether ${pogoplug_mac_address}
 END
+	fi
 fi
 
-if [ \"${pogoplug_v3_version}\" = \"pro\" ]
+if [ ! -z \"${wireless_interface}\" ]
 then
-	cat <<END >> /etc/network/interfaces
-auto wlan0 
-END
 	if [ \"${ip_type_wireless}\" = \"dhcp\" ]
 	then
 		cat <<END >> /etc/network/interfaces
-iface wlan0 inet dhcp
+iface ${wireless_interface} inet dhcp
 wpa-driver wext
 wpa-ssid ${wireless_ssid}
 wpa-ap-scan 1
@@ -393,30 +445,22 @@ END
 	elif [ \"${ip_type_wireless}\" = \"static\" ]
 	then
 		cat <<END >> /etc/network/interfaces
-iface wlan0 inet static
-    address ${wireless_static_ip}
-    netmask ${wireless_netmask}
-    network ${wireless_static_ip%.*}.0
-    broadcast ${wireless_static_ip%.*}.255
-    gateway ${wireless_gateway_ip}
-    dns-nameservers ${nameserver_addr}
-    wpa-ssid ${wireless_ssid}
-    wpa-psk ${wireless_password}
+iface ${wireless_interface} inet static
+address ${wireless_static_ip}
+netmask ${wireless_netmask}
+network ${wireless_static_ip%.*}.0
+broadcast ${wireless_static_ip%.*}.255
+gateway ${wireless_gateway_ip}
+dns-nameservers ${nameserver_addr}
+wpa-ssid ${wireless_ssid}
+wpa-psk ${wireless_password}
 END
 	fi
 fi
 
-mkdir -p /etc/Wireless/RT2860STA/
-cat<<END>/etc/Wireless/RT2860STA/RT2860STA.dat
-CountryRegion=${Country_Region}
-CountryRegionABand=${Country_Region_A_Band}
-CountryCode=${Country_Code}
-WirelessMode=${Wireless_Mode}
-END
+echo ${hostname} > /etc/hostname 2>>/debootstrap_stg2_errors.txt
 
-echo ${pogo_hostname} > /etc/hostname 2>>/debootstrap_stg2_errors.txt
-
-echo \"127.0.0.1 ${pogo_hostname}\" >> /etc/hosts 2>>/debootstrap_stg2_errors.txt
+echo \"127.0.0.1 ${hostname}\" >> /etc/hosts 2>>/debootstrap_stg2_errors.txt
 echo \"nameserver ${nameserver_addr}\" > /etc/resolv.conf 2>>/debootstrap_stg2_errors.txt
 
 cat <<END > /etc/rc.local 2>>/debootstrap_stg2_errors.txt
@@ -448,18 +492,18 @@ rm /debootstrap_pt1.sh
 exit 0" > ${qemu_mnt_dir}/debootstrap_pt1.sh
 chmod +x ${qemu_mnt_dir}/debootstrap_pt1.sh
 
-modprobe binfmt_misc
+modprobe binfmt_misc && write_log "'modprobe binfmt_misc' successfully done!" || write_log "ERROR: 'modprobe binfmt_misc' failed!"
 
-cp /usr/bin/qemu-arm-static ${qemu_mnt_dir}/usr/bin
+cp /usr/bin/qemu-arm-static ${qemu_mnt_dir}/usr/bin && write_log "'cp /usr/bin/qemu-arm-static ${qemu_mnt_dir}/usr/bin' successfully done!" || write_log "ERROR: 'cp /usr/bin/qemu-arm-static ${qemu_mnt_dir}/usr/bin' failed!"
 
 mkdir -p ${qemu_mnt_dir}/dev/pts
 
 write_log "Mounting both /dev/pts and /proc on the temporary filesystem."
-mount devpts ${qemu_mnt_dir}/dev/pts -t devpts
-mount -t proc proc ${qemu_mnt_dir}/proc
+mount devpts ${qemu_mnt_dir}/dev/pts -t devpts && write_log "'mount devpts ${qemu_mnt_dir}/dev/pts -t devpts' successfully done!" || write_log "ERROR: 'mount devpts ${qemu_mnt_dir}/dev/pts -t devpts' failed!"
+mount -t proc proc ${qemu_mnt_dir}/proc && write_log "'mount -t proc proc ${qemu_mnt_dir}/proc' successfully done!" || write_log "ERROR: 'mount -t proc proc ${qemu_mnt_dir}/proc' failed!"
 
 write_log "Entering chroot environment NOW!"
-/usr/sbin/chroot ${qemu_mnt_dir} /bin/bash /debootstrap_pt1.sh 2>${output_dir}/debootstrap_pt1_errors.txt
+/usr/sbin/chroot ${qemu_mnt_dir} /bin/bash /debootstrap_pt1.sh 2>${output_dir}/debootstrap_pt1_errors.txt || write_log "ERROR:'/usr/sbin/chroot ${qemu_mnt_dir} /bin/bash /debootstrap_pt1.sh' failed."
 if [ "$?" = "0" ]
 then
 	write_log "First part of chroot operations done successfully!"
@@ -470,7 +514,7 @@ fi
 
 if [ "${use_cache}" = "yes" ]
 then
-	if [ "${pogoplug_v3_version}" = "classic" ]
+	if [ -z "${wireless_interface}" ]
 	then
 		if [ -e ${output_dir_base}/cache/additional_packages.tar.bz2 ]
 		then
@@ -482,8 +526,7 @@ then
 Creating it now!"
 			add_pack_create="yes"
 		fi
-	elif [ "${pogoplug_v3_version}" = "pro" ]
-	then
+	else
 		if [ -e ${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2 ]
 		then
 			write_log "Extracting the additional packages 'additional_packages_including_wireless.tar.bz2' from cache. now."
@@ -494,11 +537,6 @@ Creating it now!"
 Creating it now!"
 			add_pack_create="yes"
 		fi
-	else
-		write_log "Setting for pogoplug_v3_version seems to be incorrect.
-It was set to '${poogplug_v3_version}'. Please check!."
-		umount_img all
-		exit 95
 	fi
 fi
 
@@ -506,7 +544,7 @@ echo "#!/bin/bash
 export LANG=C 2>>/debootstrap_stg2_errors.txt
 apt-key update
 apt-get -d -y --force-yes install ${additional_packages} 2>>/debootstrap_stg2_errors.txt
-if [ \"${pogoplug_v3_version}\" = \"pro\" ]
+if [ ! -z \"${wireless_interface}\" ]
 then
 	apt-get -d -y --force-yes install ${additional_wireless_packages} 2>>/debootstrap_stg2_errors.txt
 fi
@@ -516,6 +554,7 @@ then
 	locale-gen 2>>/debootstrap_stg2_errors.txt
 else
 	echo 'ERROR! /etc/locale.gen not found!'
+	echo 'ERROR! /etc/locale.gen not found!' >>/debootstrap_stg2_errors.txt
 fi
 
 export LANG=${std_locale} 2>>/debootstrap_stg2_errors.txt	# language settings
@@ -526,8 +565,17 @@ cat <<END > /etc/fstab 2>>/debootstrap_stg2_errors.txt
 # /etc/fstab: static file system information.
 #
 # <file system> <mount point>   <type>  <options>       <dump>  <pass>
-/dev/root	/		${rootfs_filesystem_type}	defaults,noatime	0	1
-/dev/sda2	swap	swap	defaults,pri=0	0	0
+/dev/root	/		${rootfs_filesystem_type}	defaults	0	1
+END
+
+if [ ! -z \"${swap_partition}\" ]
+then
+	cat <<END >> /etc/fstab 2>>/debootstrap_stg2_errors.txt
+${swap_partition}	swap	swap	defaults,pri=0	0	0
+END
+fi
+
+cat <<END >> /etc/fstab 2>>/debootstrap_stg2_errors.txt
 tmpfs		/tmp	tmpfs	defaults	0	0
 tmpfs		/var/spool	tmpfs	defaults,noatime,mode=1777	0	0
 tmpfs		/var/tmp	tmpfs	defaults	0	0
@@ -535,7 +583,7 @@ tmpfs		/var/log	tmpfs	defaults,noatime,mode=0755	0	0
 END
 
 sed -i 's/^\([1-6]:.* tty[1-6]\)/#\1/' /etc/inittab 2>>/debootstrap_stg2_errors.txt
-echo '#T0:2345:respawn:/sbin/getty -L ttyS0 115200 vt102' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
+echo '#T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt102' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
 
 rm /debootstrap_pt2.sh
 exit 0" > ${qemu_mnt_dir}/debootstrap_pt2.sh
@@ -546,7 +594,7 @@ mount devpts ${qemu_mnt_dir}/dev/pts -t devpts
 mount -t proc proc ${qemu_mnt_dir}/proc
 
 write_log "Entering chroot environment NOW!"
-/usr/sbin/chroot ${qemu_mnt_dir} /bin/bash /debootstrap_pt2.sh 2>${output_dir}/debootstrap_pt2_errors.txt
+/usr/sbin/chroot "${qemu_mnt_dir}" /bin/bash /debootstrap_pt2.sh 2>${output_dir}/debootstrap_pt2_errors.txt
 
 if [ "$?" = "0" ]
 then
@@ -560,17 +608,11 @@ if [ "${add_pack_create}" = "yes" ]
 then
 	write_log "Compressing additional packages, in order to save them in the cache directory."
 	cd ${qemu_mnt_dir}/var/cache/apt/
-	if [ "${pogoplug_v3_version}" = "classic" ]
+	if [ -z "${wireless_interface}" ]
 	then
 		tar_all compress "${output_dir_base}/cache/additional_packages.tar.bz2" .
-	elif [ "${pogoplug_v3_version}" = "pro" ]
-	then
-		tar_all compress "${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2" .
 	else
-		write_log "Setting for pogoplug_v3_version seems to be incorrect.
-It was set to '${poogplug_v3_version}'. Please check!."
-		umount_img all
-		exit 96
+		tar_all compress "${output_dir_base}/cache/additional_packages_including_wireless.tar.bz2" .
 	fi
 	write_log "Successfully created compressed cache archive of additional packages."
 	cd ${output_dir}
@@ -610,29 +652,6 @@ then
 		get_n_check_file "${qemu_kernel_pkg}" "qemu_kernel" "${output_dir}/tmp"
 		cp ${output_dir}/tmp/${qemu_kernel_pkg##*/} ${output_dir_base}/cache/
 	fi
-	if [ "${boot_directly_via_sata}" = "yes" ]
-	then
-		tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
-		sleep 1
-		if [ -e ${output_dir_base}/cache/${sata_boot_stage1##*/} ]
-		then
-			write_log "Found SATA stage1 bootlaoder in cache. Just linking it locally now."
-			ln -s ${output_dir_base}/cache/${sata_boot_stage1##*/} ${output_dir}/tmp/${sata_boot_stage1##*/}
-		else
-			write_log "SATA stage1 bootloader NOT found in cache. Getting it now and copying it to cache."
-			get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
-			cp ${output_dir}/tmp/${sata_boot_stage1##*/} ${output_dir_base}/cache/
-		fi
-		if [ -e ${output_dir_base}/cache/${sata_uboot##*/} ]
-		then
-			write_log "Found SATA uboot bootlaoder in cache. Just linking it locally now."
-			ln -s ${output_dir_base}/cache/${sata_uboot##*/} ${output_dir}/tmp/${sata_uboot##*/}
-		else
-			write_log "SATA uboot bootloader NOT found in cache. Getting it now and copying it to cache."
-			get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
-			cp ${output_dir}/tmp/${sata_uboot##*/} ${output_dir_base}/cache/
-		fi
-	fi
 else	
 	get_n_check_file "${std_kernel_pkg}" "standard_kernel" "${output_dir}/tmp"
 	get_n_check_file "${qemu_kernel_pkg}" "qemu_kernel" "${output_dir}/tmp"
@@ -642,28 +661,13 @@ fi
 	sleep 1
 	tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${qemu_mnt_dir}"
 	sleep 1
-	if [ "${boot_directly_via_sata}" = "yes" ]
-	then
-		tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
-		sleep 1
-		get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
-		get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
-	fi
-
+	
 if [ -d ${output_dir}/qemu-kernel/lib/ ]
 then
 	cp -ar ${output_dir}/qemu-kernel/lib/ ${qemu_mnt_dir}  # copy the qemu kernel modules into the rootfs
 fi
 sync
 chown root:root ${output_dir}/mnt_debootstrap/lib/modules/ -R
-if [ -e ${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware ]
-then
-	write_log "Moving gmac-firmware file to the right position ('/lib/firmware')."
-	mkdir -p ${output_dir}/mnt_debootstrap/lib/firmware/
-	mv ${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware ${output_dir}/mnt_debootstrap/lib/firmware/ 2>>${output_dir}/log.txt
-else
-	write_log "Could not find '${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware'. So, not moving it."
-fi
 
 if [ ! -z "${module_load_list}" ]
 then
@@ -720,6 +724,9 @@ END
 
 exit 0" >> ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 	fi
+	else
+		write_log "Not using ZRAM.
+Setting for variable 'use_compressed_swapspace' was '${use_compressed_swapspace}'."
 fi
 chmod +x ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 
@@ -729,15 +736,15 @@ echo "#!/bin/bash
 
 date -s \"${date_cur}\" 2>>/post_debootstrap_errors.txt	# set the system date to prevent PAM from exhibiting its nasty DAY0 forced password change
 apt-get -y --force-yes install ${additional_packages} 2>>/post_debootstrap_errors.txt
-if [ \"${pogoplug_v3_version}\" = \"pro\" ]
+if [ ! -z \"${wireless_interface}\" ]
 then
 	apt-get -y --force-yes install ${additional_wireless_packages} 2>>/debootstrap_stg2_errors.txt
 fi
 apt-get clean	# installed the already downloaded packages
 
-if [ "${use_compressed_swapspace}" = "yes" ]
+if [ \"${use_compressed_swapspace}\" = \"yes\" ]
 then
-	if [ ! -z "${vm_swappiness}" ]
+	if [ ! -z \"${vm_swappiness}\" ]
 	then
 		echo vm.swappiness=${vm_swappiness} >> /etc/sysctl.conf
 	fi
@@ -844,16 +851,6 @@ passwd -w -1 root 2>>/post_debootstrap_errors.txt
 
 echo -e \"${user_password}\n${user_password}\n\n\n\n\n\n\n\" | adduser ${username} 2>>/post_debootstrap_errors.txt
 
-if [ ! \"${build_target_version}\" = \"squeeze\" ] && [ ! \"${build_target_version}\" = \"squeeze-grip\" ] && [ ! \"${build_target_version}\" = \"oldstable\" ] && [ ! \"${build_target_version}\" = \"oldstable-grip\" ]
-then
-	sed -i 's<^CONCURRENCY=makefile<CONCURRENCY=\"none\"<g' /etc/init.d/rc
-fi
-
-if [ \"${boot_directly_via_sata}\" = \"yes\" ]
-then
-	sed -i 's</dev/sda2</dev/sda3/<g' /etc/fstab
-fi
-
 sed -i 's<#T0:2345:respawn:/sbin/getty<T0:2345:respawn:/sbin/getty<g' /etc/inittab
 dpkg -l >/installed_packages.txt
 df -ah > /disk_usage.txt
@@ -898,6 +895,10 @@ else
 	write_log "Variable 'extra_files' appears to be empty. No additional files extracted into the completed rootfs."
 fi
 
+### run machine specific configuration
+do_post_debootstrap_config_machine
+
+# umount all
 umount_img all
 if [ "$?" = "0" ]
 then
@@ -914,11 +915,19 @@ mount |grep "${output_dir}/mnt_debootstrap" > /dev/null
 if [ ! "$?" = "0" ]
 then
 	write_log "Starting the qemu environment now!"
-	qemu-system-arm -M versatilepb -cpu arm926 -no-reboot -kernel ${output_dir}/qemu-kernel/zImage -hda ${output_dir}/${output_filename}.img -m 256 -append "root=/dev/sda rootfstype=${rootfs_filesystem_type} mem=256M rw" 2>qemu_error_log.txt
+	${machine_qemu_command} 2>qemu_error_log.txt
+	if [ "$?" = "0" ]
+	then
+		write_log "'qemu-system-arm' seems to have closed cleanly. DONE!"
+	else
+		write_log "ERROR: '${machine_qemu_command}' returned error code '$?'.
+Exiting now!"
+		exit 51
+	fi
 else
 	write_log "ERROR: Filesystem is still mounted. Can't run qemu!
 'qemu-system-arm' returned error code '$?'. Exiting now!"
-	exit 51
+	exit 52
 fi
 
 write_log "Additional chroot system configuration successfully finished!"

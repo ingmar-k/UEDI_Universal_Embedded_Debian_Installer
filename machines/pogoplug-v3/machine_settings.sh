@@ -38,8 +38,10 @@
 #######################################
 
 ### These settings MUST be checked/edited ###
-pogoplug_v3_version="classic" # either 'classic' or 'pro' (the pro features integrated wireless lan, the classic does NOT; if you set this to 'pro' 'additional_packages_wireless' will be included)
-pogoplug_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!) Without a valid MAC address, your device won't be accessible via LAN
+machine_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!) Without a valid MAC address, your device won't be accessible via LAN
+
+console_device="ttyS0" # Device used for the serial console (usually 'ttyS0')
+console_baudrate="115200" # Baudrate to use for the serial console (often '115200')
 
 deb_add_packages="apt-utils,dialog,locales,emdebian-archive-keyring,debian-archive-keyring" # packages to directly include in the first debootstrap stage
 additional_packages="mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
@@ -47,11 +49,16 @@ additional_wireless_packages="wireless-tools wpasupplicant" # packages for wirel
 
 module_load_list="" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
-interfaces_auto="lo eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot; if you don't list the needed interfaces here, you will have to enable them manually, after booting
-nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO CHECK THIS!!!)
+ethernet_interface="eth0" # (IMPORTANT!!!) What ethernet interface exists on your device? (for example 'eth0' for standard ethernet)
+interfaces_auto="eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot (except for lo, which will be included automatically); if you don't list the needed interfaces here, you will have to enable them manually, after booting
+wireless_interface="" # (IMPORTANT!!!) What wireless interface exists on your device? (for example 'wlan0' for standard wireless)
 
 rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs be?
-
+# ATTENTION: Your kernel has to support the filesystem-type that you specify here. Otherwise the Pogoplug won't boot.
+# ALSO, please check the Uboot Environment Variable 'bootargs' !!!
+# The part 'rootfstype=' has to reflect the filesystem that your created USB drive uses!
+# AND your specified (and flashed!) kernel has to have support for that file system (compiled in, NOT as module!!!)
+swap_partition="/dev/sda2" # Specify the name of the swap device (for example '/dev/sda2', is the second partition of a USB device is used as swap. CAN BE LEFT EMPTY, although this is not recommended!
 
 ### These settings are for experienced users ###
 
@@ -63,18 +70,13 @@ std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.12.13-
 
 work_image_size_MB="512" # size of the temporary image file, in which the installation process is carried out
 
-output_filename="${build_target}_rootfs_${machine_id}_${pogoplug_v3_version}_${rootfs_filesystem_type}_${current_date}" # base name of the output file (compressed rootfs)
+machine_qemu_command="qemu-system-arm -M versatilepb -cpu arm926 -no-reboot -kernel ${output_dir}/qemu-kernel/zImage -hda ${output_dir}/${output_filename}.img -m 256 -append \"root=/dev/sda rootfstype=${rootfs_filesystem_type} mem=256M rw\""
 
 
 
 ###################################
 ##### NETWORK BUILD SETTINGS: #####
 ###################################
-
-### GENERAL NETWORK SETTINGS ###
-
-pogo_hostname="pogoplug-v3-${build_target}" # Name that the Emdebian system uses to identify itself on the network
-
 
 ### ETHERNET ###
 
@@ -110,14 +112,6 @@ Country_Code="DE" # wireless country code setting for rt3090
 Wireless_Mode="5" # wireless mode setting for rt3090
 
 
-### Settings for compressed SWAP space in RAM ### 
-
-use_compressed_swapspace="yes" # Do you want to use a compressed SWAP space in RAM (can potentionally improve performance)?
-compressed_swapspace_module_name="zram" # name of the kernel module for compressed swapspace in RAM (could either be called 'ramzswap' or 'zram', depending on your kernel)
-compressed_swapspace_size_MB="32" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
-vm_swappiness="" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
-
-
 ### Partition setting ###
 # Comment: size of the rooot partition doesn't get set directly, but is computed through the following formula:
 # root partition = size_of_usb_drive - (size_boot_partition + size_swap_partition + size_wear_leveling_spare)
@@ -140,3 +134,10 @@ boot_directly_via_sata="no"
 
 sata_boot_stage1="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/sata_boot/stage1/stage1.wrapped700" # stage1 bootloader, needed for direct sata boot
 sata_uboot="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/sata_boot/u-boot/u-boot.wrapped" # uboot (stage2) file for direct sata boot
+
+
+####################################
+##### "INSTALL ONLY" SETTINGS: #####
+####################################
+
+default_rootfs_package="" # filename of the default rootfs-archive for the '--install' call parameter
