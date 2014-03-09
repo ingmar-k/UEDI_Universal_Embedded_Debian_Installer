@@ -57,7 +57,7 @@ case "$1" in
 		echo "Cleaning the cache directory, now!"
 		if [ -d ${output_dir_base}/cache/ ]
 		then
-			rm -rf ${output_dir_base}/cache/
+			rm -rf ${output_dir_base}/cache/ && echo "DONE!"
 		else
 			echo "No cache directory '${output_dir_base}/cache/' found, so not cleaning it!"
 		fi
@@ -67,7 +67,7 @@ case "$1" in
 		ls ${output_dir_base}/build_* >/dev/null 2>&1
 		if [ "$?" = "0" ]
 		then
-			rm -rf ${output_dir_base}/build_* 2>>${output_dir_base}/clean_errors.txt
+			rm -rf ${output_dir_base}/build_* 2>>${output_dir_base}/clean_errors.txt && echo "DONE!"
 		else
 			echo "No build directory '${output_dir_base}/build_*' found, so not cleaning it!"
 		fi
@@ -77,7 +77,7 @@ case "$1" in
 		echo "Cleaning the cache directory, now!"
 		if [ -d ${output_dir_base}/cache/ ]
 		then
-			rm -rf ${output_dir_base}/cache/
+			rm -rf ${output_dir_base}/cache/ && echo "DONE!"
 		else
 			echo "No cache directory '${output_dir_base}/cache/' found, so not cleaning it!"
 		fi
@@ -85,7 +85,7 @@ case "$1" in
 		ls ${output_dir_base}/build_* >/dev/null 2>&1
 		if [ "$?" = "0" ]
 		then
-			rm -rf ${output_dir_base}/build_* 2>>${output_dir_base}/clean_errors.txt
+			rm -rf ${output_dir_base}/build_* 2>>${output_dir_base}/clean_errors.txt && echo "DONE!"
 		else
 			echo "No build directory '${output_dir_base}/build_*' found, so not cleaning it!"
 		fi
@@ -106,7 +106,7 @@ If you are absolutely sure that you want to do that, please confirm by typing in
 		read affirmation
 		if [ "${affirmation}" = "yes" ]
 		then
-			rm -rf ${output_dir_base}
+			rm -rf ${output_dir_base} && echo "DONE!"
 		else
 			echo "You did not confirm, so cancelling the action, NOT removing the directory."
 		fi

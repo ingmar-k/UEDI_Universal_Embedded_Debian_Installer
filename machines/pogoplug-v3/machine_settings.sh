@@ -43,6 +43,9 @@ machine_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT
 console_device="ttyS0" # Device used for the serial console (usually 'ttyS0')
 console_baudrate="115200" # Baudrate to use for the serial console (often '115200')
 
+machine_debian_prereq="" # Here you can specify any machine specific prerequisites for a Debian host system. Can be left empty.
+machine_ubuntu_prereq="" # Here you can specify any machine specific prerequisites for a Ubuntu host system. Can be left empty.
+
 machine_debootstrap_arch="armel" # Architecture setting for debootstrap. For example 'armel' for ARMv5 and 'armhf' for ARMv7.
 deb_add_packages="apt-utils,dialog,locales,emdebian-archive-keyring,debian-archive-keyring" # packages to directly include in the first debootstrap stage
 additional_packages="mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
@@ -83,6 +86,8 @@ qemu_machine_type="versatilepb" # What specific, supported machine should qemu e
 qemu_cpu_type="arm926" # What specific cpu-type should be emulated?
 
 qemu_mem_size="256" # How much RAM to hand to the qemu cirtual system?
+
+qemu_extra_options="" # Here you can specify extra machine specific options for qemu. You can also leave it empty.
 
 qemu_hdd_mount="-hda ${output_dir}/${output_filename}.img" # How to use the rootfs image in qemu? For example as IDE disk '-hda xxx.img'.
 
