@@ -141,16 +141,16 @@ size_alignment="1" ## size of spare space before the root partitionto starts (in
 ##### SPECIFIC BUILD SETTINGS: #####
 ####################################
 
-# set the following option to 'yes', if you want to create a rootfs on a sata drive, in order to boot it directly, using the Pogoplug V3's onboard SATA connector!!!
-boot_directly_via_sata="no" 
-# However, if you want to boot from a USB drive, be sure to set the option ABOVE to 'no' !!!
+# set the following option to 'yes', if you want to create a rootfs on a SATA drive, sd card or anything similar, that needs an external bootloader, in order to boot from it.
+external_bootloader="yes" 
+# However, if you want to boot from a memory device that the internal bootloader already supports, then be sure to set the option ABOVE to 'no' !!!
 
-######################################
-##### DIRECT SATA BOOT SETTINGS: #####
-######################################
 
-sata_boot_stage1="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/sata_boot/stage1/stage1.wrapped700" # stage1 bootloader, needed for direct sata boot
-sata_uboot="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/sata_boot/u-boot/u-boot.wrapped" # uboot (stage2) file for direct sata boot
+##########################
+##### BOOT SETTINGS: #####
+##########################
+
+bootloader_package="/home/celemine1gig/Pogoplug_V3/u-boot/u-boot-SATA_old_14032014.tar.bz2" # Archive that contains all necessary bootlaoder files
 
 
 ####################################

@@ -6,7 +6,7 @@
 # This program (including documentation) is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html ) for more details.
 
-# Description: Get the USB drive device and than create the partitions and format them
+# Description: Get the card/drive device and then create the partitions and format them
 # BIG THANKS go to WarheadsSE for his SATA booting procedure, that made the direct SATA booting option in this script possible.
 # Original thread, concerning the topic of direct sata booting can be found here: http://archlinuxarm.org/forum/viewtopic.php?t=2146
 
@@ -41,41 +41,6 @@ do_post_debootstrap_config_machine()
 {
 write_log "Starting machine specific post-debootstrap configuration steps."
 
-if [ "${use_cache}" = "yes" ]
-then
-	if [ "${boot_directly_via_sata}" = "yes" ]
-	then
-		tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
-		sleep 1
-		if [ -e ${output_dir_base}/cache/${sata_boot_stage1##*/} ]
-		then
-			write_log "Found SATA stage1 bootlaoder in cache. Just linking it locally now."
-			ln -s ${output_dir_base}/cache/${sata_boot_stage1##*/} ${output_dir}/tmp/${sata_boot_stage1##*/}
-		else
-			write_log "SATA stage1 bootloader NOT found in cache. Getting it now and copying it to cache."
-			get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
-			cp ${output_dir}/tmp/${sata_boot_stage1##*/} ${output_dir_base}/cache/
-		fi
-		if [ -e ${output_dir_base}/cache/${sata_uboot##*/} ]
-		then
-			write_log "Found SATA uboot bootlaoder in cache. Just linking it locally now."
-			ln -s ${output_dir_base}/cache/${sata_uboot##*/} ${output_dir}/tmp/${sata_uboot##*/}
-		else
-			write_log "SATA uboot bootloader NOT found in cache. Getting it now and copying it to cache."
-			get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
-			cp ${output_dir}/tmp/${sata_uboot##*/} ${output_dir_base}/cache/
-		fi
-	fi
-else
-	if [ "${boot_directly_via_sata}" = "yes" ]
-	then
-		tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
-		sleep 1
-		get_n_check_file "${sata_boot_stage1}" "sata stage1" "${output_dir}/tmp"
-		get_n_check_file "${sata_uboot}" "sata uboot" "${output_dir}/tmp"
-	fi
-fi
-
 if [ -e ${output_dir}/mnt_debootstrap/lib/modules/gmac_copro_firmware ]
 then
 	write_log "Moving gmac-firmware file to the right position ('/lib/firmware')."
@@ -92,9 +57,9 @@ write_log "Machine specific, additional chroot system configuration successfully
 
 partition_n_format_disk()
 {
-if [ "${boot_directly_via_sata}" = "yes" ]
+if [ "${external_bootloader}" = "yes" ]
 then
-	write_log "Direct SATA boot is enabled. Preparing drive for SATA boot, now."
+	write_log "Direct booting, using a external bootlaoder, is enabled. Preparing drive for direct booting, now."
 fi
 
 device="" # initalize 'device' as empty variable, to make sure
@@ -105,7 +70,7 @@ while [ -z "${device}" ]
 do
 	parted -l
 
-	read -t 30 -p "
+	read -t 60 -p "
 __________________________________________________
 
 Please enter the name of the drive/card device (eg. /dev/sdb) OR press ENTER to refresh the device list:
@@ -121,7 +86,7 @@ __________________________________________________
 		then
 			echo "'${device}' partition table:"
 			parted -s ${device} unit MB print
-			read -t 60 -p "
+			read -t 300 -p "
 __________________________________________________
 		
 If you are sure that you want to repartition device '${device}', then please type 'yes'.
@@ -131,11 +96,11 @@ __________________________________________________
 " affirmation
 			if [ ! -z "${affirmation}" -a "${affirmation}" = "yes" ]
 			then
-				if [ ! "${boot_directly_via_sata}" = "yes" ]
+				if [ ! "${external_bootloader}" = "yes" ]
 				then 
 					if [ ! -z "${size_swap_partition}" ]
 					then
-						write_log "USB drive device set to '${device}', according to user input."
+						write_log "Card/drive device set to '${device}', according to user input."
 						parted -s ${device} mklabel msdos
 						if [ ! -z "${size_wear_leveling_spare}" ]
 						then
@@ -157,10 +122,10 @@ Exiting now!"
 						regular_cleanup
 						exit 29
 					fi
-				else
+				else # case of using a external bootloader for direct booting
 					if [ ! -z "${size_swap_partition}" ]
 					then
-						write_log "SATA drive device set to '${device}', according to user input."
+						write_log "Card/drive device set to '${device}', according to user input."
 						parted -s ${device} mklabel msdos
 						if [ ! -z "${size_wear_leveling_spare}" ]
 						then
@@ -212,7 +177,7 @@ Exiting now!"
 	fi
 done
 
-if [ ! "${boot_directly_via_sata}" = "yes" ]
+if [ ! "${external_bootloader}" = "yes" ]
 then
 	if [ -e ${device}1 ] && [ -e ${device}2 ]
 	then
@@ -228,9 +193,11 @@ Exiting now!"
 else # case of direct sata booting
 	if [ -e ${device}1 ] && [ -e ${device}2 ] && [ -e ${device}3 ]
 	then
-		dd if=/dev/zero of=${device}1 >/dev/null # partition 1 needs to be raw, without a filesystem
-		### Now writing the hex codes for SATA booting to the drive's bootsector
-		perl <<EOF | dd of=${device} bs=512
+		if [ -f ${output_dir}/tmp/u-boot.wrapped -a -f ${output_dir}/tmp/stage1.wrapped* ] # case of using the older bootloader files
+		then
+			dd if=/dev/zero of=${device}1 >/dev/null # partition 1 needs to be raw, without a filesystem
+			### Now writing the hex codes for SATA booting to the drive's bootsector
+			perl <<EOF | dd of=${device} bs=512
 print "\x00" x 0x1a4;
 print "\x00\x5f\x01\x00";
 print "\x00\xdf\x00\x00";
@@ -240,17 +207,57 @@ print "\x22\x80\x00\x00";
 print "\x22\x00\x00\x00";
 print "\x00\x80\x00\x00";
 EOF
-		dd if=${output_dir}/tmp/${sata_boot_stage1##*/} of=${device} bs=512 seek=34 && write_log "Stage1 bootloader successfully written to disk '${device}'." # write stage1 to disk
-		dd if=${output_dir}/tmp/${sata_uboot##*/} of=${device} bs=512 seek=154 && write_log "Uboot successfully written to disk '${device}'." # write uboot to disk
-		dd if=${output_dir}/tmp/uImage of=${device}1 bs=512 && write_log "Kernel successfully written to disk '${device}'." # write kernel to disk
-		mkfs.${rootfs_filesystem_type} ${device}2 # ${rootfs_filesystem_type} on root partition
-		tune2fs -L "rootfs" ${device}2 # give rootfs partition the corresponding label
-		mkswap ${device}3 # swap
+			dd if=`ls ${output_dir}/tmp/stage1.wrapped*` of=${device} bs=512 seek=34 && write_log "Stage1 (stage1.wrapped*) bootloader successfully written to disk '${device}'." # write stage1 to disk
+			dd if=${output_dir}/tmp/u-boot.wrapped of=${device} bs=512 seek=154 && write_log "Uboot (u-boot.wrapped) successfully written to disk '${device}'." # write uboot to disk
+			dd if=${output_dir}/tmp/uImage of=${device}1 bs=512 && write_log "Kernel successfully written to disk '${device}'." # write kernel to disk
+			mkfs.${rootfs_filesystem_type} ${device}2 # ${rootfs_filesystem_type} on root partition
+			tune2fs -L "rootfs" ${device}2 # give rootfs partition the corresponding label
+			mkswap ${device}3 # swap
+		elif [ -f ${output_dir}/tmp/u-boot.img -a -f ${output_dir}/tmp/u-boot-spl.bin ] # case of using the newer bootloader files
+		then
+			mkfs.vfat -L "boot" ${device}1 >/dev/null # partition 1 needs to formatted with the FAT filesystem
+			### Now writing the hex codes for SATA booting to the drive's bootsector
+			perl <<EOF | dd of=${device} bs=512
+print "\x00" x 0x1a4;
+print "\x00\x5f\x01\x00";
+print "\x00\xdf\x00\x00";
+print "\x00\x80\x00\x00";
+print "\x00" x (0x1b0 -0x1a4 -12 );
+print "\x22\x80\x00\x00";
+print "\x22\x00\x00\x00";
+print "\x00\x80\x00\x00";
+EOF
+			dd if=${output_dir}/tmp/u-boot-spl.bin of=${device} bs=512 seek=34 && write_log "Stage1 (u-boot-spl.bin) bootloader successfully written to disk '${device}'." # write stage1 to disk
+			mkdir ${output_dir}/mnt_direct_boot
+			sleep 1
+			if [ -d "${output_dir}/mnt_direct_boot/" ]
+			then
+				mount ${device}1 ${output_dir}/mnt_direct_boot/ && write_log "Successfully mounted the FAT partition '${device}1'." # mount FAT drive to '${output_dir}/mnt_direct_boot'
+			else
+				write_log "ERROR: Could not find the directory '${output_dir}/mnt_direct_boot' needed as a mount point.
+Exiting now!"
+				regular cleanup
+				exit 32
+			fi
+			cp ${output_dir}/tmp/u-boot.img ${output_dir}/mnt_direct_boot/ && write_log "Uboot successfully copied to the first disk partition '${device}1'." # copy uboot to disk
+			cp ${output_dir}/tmp/uImage ${output_dir}/mnt_direct_boot && write_log "Kernel successfully copied to the disk's first partition '${device}1'." # copy kernel to disk
+			sleep 3
+			umount ${output_dir}/mnt_direct_boot && write_log "FAT partition '${device}1' successfully unmounted."
+			mkfs.${rootfs_filesystem_type} ${device}2 # ${rootfs_filesystem_type} on root partition
+			tune2fs -L "rootfs" ${device}2 # give rootfs partition the corresponding label
+			mkswap -L "swap" ${device}3 # swap
+		else
+			write_log "ERROR: Direct booting via a external bootloader was enabled in the settings file.
+However, no appropriate combination of bootloader files could be found in '${output_dir}/tmp/'!
+Please check. Exiting now!"
+			regular_cleanup
+			exit 33
+		fi
 	else
 		write_log "ERROR: There should be 3 partitions on '${device}', but one or more seem to be missing.
 Exiting now!"
 		regular_cleanup
-		exit 31
+		exit 34
 	fi
 fi
 
@@ -276,7 +283,7 @@ then
 		mkdir ${output_dir}/drive
 		if [ "$?" = "0" ]
 		then
-			if [ ! "${boot_directly_via_sata}" = "yes" ]
+			if [ ! "${external_bootloader}" = "yes" ]
 			then
 				rootfs_partition_number="1"
 			else
@@ -286,7 +293,7 @@ then
 			mount ${device}${rootfs_partition_number} ${output_dir}/drive
 			if [ "$?" = "0" ]
 			then
-				if [ -e ${output_dir}/${output_filename}.tar.${tar_format} ]
+				if [ -f "${output_dir}/${output_filename}.tar.${tar_format}" ]
 				then 
 					tar_all extract "${output_dir}/${output_filename}.tar.${tar_format}" "${output_dir}/drive"
 				else
@@ -329,6 +336,10 @@ ALL DONE!"
 
 		rm -r ${output_dir}/tmp
 		rm -r ${output_dir}/drive
+		if [ "${external_bootloader}" = "yes" ]
+		then
+			rm -r ${output_dir}/mnt_direct_boot/
+		fi
 	else
 		write_log "ERROR: Some partition on device '${device}' is still mounted. Exiting now!"
 	fi

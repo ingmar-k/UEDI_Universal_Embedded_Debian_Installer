@@ -692,12 +692,37 @@ fi
 	tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${qemu_mnt_dir}"
 	sleep 1
 	
+		
 if [ -d ${output_dir}/qemu-kernel/lib/ ]
 then
 	cp -ar ${output_dir}/qemu-kernel/lib/ ${qemu_mnt_dir}  # copy the qemu kernel modules into the rootfs
 fi
 sync
 chown root:root ${output_dir}/mnt_debootstrap/lib/modules/ -R
+
+if [ "${external_bootloader}" = "yes" ]
+then
+	if [ "${use_cache}" = "yes" ]
+	then
+		#tar_all extract "${output_dir}/tmp/${bootloader_package##*/}" "${output_dir}/tmp"
+		sleep 1
+		if [ -e ${output_dir_base}/cache/${bootloader_package##*/} ]
+		then
+			write_log "Found external bootloader package in cache. Just linking it locally now."
+			ln -s ${output_dir_base}/cache/${bootloader_package##*/} ${output_dir}/tmp/${bootloader_package##*/}
+		else
+			write_log "External bootloader package NOT found in cache. Getting it now and copying it to cache."
+			get_n_check_file "${bootloader_package}" "external bootloader package" "${output_dir}/tmp"
+			cp ${output_dir}/tmp/${bootloader_package##*/} ${output_dir_base}/cache/
+		fi
+	else
+		#tar_all extract "${output_dir}/tmp/${bootloader_package##*/}" "${output_dir}/tmp"
+		#sleep 1
+		get_n_check_file "${bootloader_package}" "external bootloader package" "${output_dir}/tmp"
+	fi
+	tar_all extract "${output_dir}/tmp/${bootloader_package##*/}" "${output_dir}/tmp"
+	tar_all extract "${output_dir}/tmp/${std_kernel_pkg##*/}" "${output_dir}/tmp"
+fi
 
 if [ ! -z "${module_load_list}" ]
 then

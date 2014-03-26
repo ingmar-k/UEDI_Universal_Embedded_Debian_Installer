@@ -21,7 +21,7 @@
 ######### SETTING FOR DEBUG MODE #########
 ##########################################
 #
-DEBUG="0" # Set to '1' to see all commands, while the script is running. Set to '0' to disable that output.
+DEBUG="0" # Set to '1' to see all commands, while the script is running. Set to '0' to disable that output.1
 #
 ##########################################
 ##########################################
@@ -106,7 +106,7 @@ vm_swappiness="" # (empty string makes the script ignore this setting and uses t
 ##### SPECIFIC BUILD SETTINGS: #####
 ####################################
 
-clean_tmp_files="yes" # delete the temporary files, when the build process is done?
+clean_tmp_files="no" # delete the temporary files, when the build process is done?
 
 create_disk="yes" # create a bootable USB thumb drive after building the rootfs?
 
