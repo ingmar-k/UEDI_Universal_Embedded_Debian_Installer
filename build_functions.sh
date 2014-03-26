@@ -134,6 +134,7 @@ do
 		then 
 			ping_error=`expr ${ping_error} + 1`
 		fi
+		sleep 2 # wait to give the servers some time
 	done
 	if [ "${ping_error}" = "0" ]
 	then 
@@ -143,7 +144,7 @@ do
 	elif [ ! "${ping_error}" = "0" -a ! "${i}" = "linuxmint.com" ]
 	then
 		write_log "ERROR: Pinging '${i}' did NOT work. Internet connectivity seems bad or you are not connected.
-Ping encountered `expr ${ping_error} + 1` failed attempts, out of 5.
+Ping encountered ${ping_error} failed attempts, out of 5.
 Retrying now, with a new destination address!"
 	else
 		write_log "ERROR: All ping attempts failed!
@@ -161,10 +162,20 @@ check_n_install_prerequisites()
 {
 if [ "${host_os}" = "Debian" ]
 then
-	apt_prerequisites=${apt_prerequisites_debian}
+	if [ ! -z "${machine_debian_prereq}" ]
+	then
+		apt_prerequisites="${apt_prerequisites_debian} ${machine_debian_prereq}"
+	else
+		apt_prerequisites=${apt_prerequisites_debian}
+	fi
 elif [ "${host_os}" = "Ubuntu" ]
 then
-	apt_prerequisites=${apt_prerequisites_ubuntu}
+	if [ ! -z "${machine_ubuntu_prereq}" ]
+	then
+		apt_prerequisites="${apt_prerequisites_ubuntu} ${machine_ubuntu_prereq}"
+	else
+		apt_prerequisites=${apt_prerequisites_ubuntu}
+	fi
 else
 	echo "OS-Type '${host_os}' not correct.
 Please run 'build_emdebian_debian_system.sh --help' for more information"
@@ -970,7 +981,7 @@ mount |grep "${output_dir}/mnt_debootstrap" > /dev/null
 if [ ! "$?" = "0" ]
 then
 	write_log "Starting the qemu environment now!"
-	qemu-system-${qemu_arch} -M ${qemu_machine_type} -cpu ${qemu_cpu_type} -no-reboot -kernel ${output_dir}/qemu-kernel/zImage ${qemu_hdd_mount} -m ${qemu_mem_size} -append "${qemu_kernel_cmdline}" 2>qemu_error_log.txt
+	qemu-system-${qemu_arch} -M ${qemu_machine_type} -cpu ${qemu_cpu_type} ${qemu_extra_options} -no-reboot -kernel ${output_dir}/qemu-kernel/zImage ${qemu_hdd_mount} -m ${qemu_mem_size} -append "${qemu_kernel_cmdline}" 2>qemu_error_log.txt
 	if [ "$?" = "0" ]
 	then
 		write_log "'qemu-system-arm' seems to have closed cleanly. DONE!"

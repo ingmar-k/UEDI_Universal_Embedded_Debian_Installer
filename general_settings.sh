@@ -42,7 +42,7 @@ machine_id="pogoplug-v3"
 ##### GENERAL BUILD SETTINGS: #####
 ###################################
 
-host_os="Debian" # Debian or Ubuntu (YOU NEED TO EDIT THIS!) The system you are running THIS script on!
+host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!) The system you are running THIS script on!
 
 build_target="emdebian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
 build_target_version="testing" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
@@ -86,8 +86,8 @@ qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesyst
 base_sys_cache_tarball="${machine_id}_${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
 
 ### Check these very carefully, if you experience errors while running 'check_n_install_prerequisites'
-apt_prerequisites_debian="sgabios emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on debian
-apt_prerequisites_ubuntu="sgabios debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on ubuntu
+apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on debian
+apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on ubuntu
 
 
 ### GENERAL NETWORK SETTINGS ###
