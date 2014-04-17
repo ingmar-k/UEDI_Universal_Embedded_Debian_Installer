@@ -67,9 +67,9 @@ swap_partition="LABEL=mmc_swap"
 
 extra_files="" # some extra archives (list seperated by a single blank space!) that get extracted into the rootfs, when done (for example original led control program and original arch linux kernel modules)
 
-qemu_kernel_pkg="/home/celemine1gig/Allwinner/A10/QEMU/kernels/linux-3.4.87-qemu-cortex-a8-1.1.tar.xz" # qemu kernel file name
+qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner_A10/kernels/linux-3.4.87-qemu-cortex-a8-1.1.tar.xz" # qemu kernel file name
 
-std_kernel_pkg="/home/celemine1gig/Allwinner/A10/BA_10_TV_BOX/kernels/stage-3.4-sunxi/3.4.86-a10-tvbox-mali-r3p2-01rel2-1.0-dirty.tar.xz" # std kernel file name
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner_A10/kernels/3.4.86-a10-tvbox-mali-r3p2-01rel2-1.0-dirty.tar.xz" # std kernel file name
 
 work_image_size_MB="6144" # size of the temporary image file, in which the installation process is carried out
 
@@ -172,6 +172,7 @@ libvdpau_sunxi_git_tarball="libvdpau-sunxi.tar.xz"
 ### Partition setting ###
 # Comment: size of the rooot partition doesn't get set directly, but is computed through the following formula:
 # root partition = size_of_usb_drive - (size_boot_partition + size_swap_partition + size_wear_leveling_spare)
+size_boot_partition="16" # size of the boot partition, in MB (MegaByte)
 size_swap_partition="512"   # size of the swap partition, in MB (MegaByte)
 size_wear_leveling_spare="512" ## size of spare space to leave for advanced usb thumb drive flash wear leveling, in MB (MegaByte); leave empty for normal hdds
 size_alignment="1" ## size of spare space before the root partitionto starts (in MegaByte); also leave empty for normal hdds
@@ -185,7 +186,7 @@ size_alignment="1" ## size of spare space before the root partitionto starts (in
 # set the following option to 'yes', if you want to create a rootfs on a SATA drive, sd card or anything similar, that needs an external bootloader, in order to boot from it.
 external_bootloader="yes" 
 # However, if you want to boot from a memory device that the internal bootloader already supports, then be sure to set the option ABOVE to 'no' !!!
-bootloader_package="/home/celemine1gig/Allwinner/A10/BA_10_TV_BOX/u-boot/u-boot-ba_10_tv_box.tar.xz" # Archive that contains all necessary bootlaoder files
+bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner_A10/bootloader/u-boot-ba_10_tv_box.tar.xz" # Archive that contains all necessary bootlaoder files
 bootloader_script_bin="/home/celemine1gig/Allwinner/A10/BA_10_TV_BOX/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
 
 
