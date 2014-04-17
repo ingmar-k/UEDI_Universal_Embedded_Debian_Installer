@@ -437,6 +437,8 @@ fi
 apt-get update
 
 mknod /dev/${console_device} c 4 64	# for the serial console 2>>/debootstrap_stg2_errors.txt
+#mknod /dev/${qemu_console_device} c 204 64	# for the serial console 2>>/debootstrap_stg2_errors.txt
+#mknod /dev/mmcblk0 b 179 0 2>>/debootstrap_stg2_errors.txt
 
 cat <<END > /etc/network/interfaces
 auto lo ${interfaces_auto}
@@ -556,22 +558,22 @@ if [ "${use_cache}" = "yes" ]
 then
 	if [ -z "${wireless_interface}" ]
 	then
-		if [ -e ${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2 ]
+		if [ -e ${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.xz ]
 		then
-			write_log "Extracting the additional packages 'additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2' from cache. now."
-			tar_all extract "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
-		elif [ ! -e "${output_dir}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2" ]
+			write_log "Extracting the additional packages 'additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.xz' from cache. now."
+			tar_all extract "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.xz" "${qemu_mnt_dir}/var/cache/apt/" 
+		elif [ ! -e "${output_dir}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.xz" ]
 		then
 			write_log "No compressed 'additional_packages_${machine_id}_${build_target}_${build_target_version}' archive found in cache directory.
 Creating it now!"
 			add_pack_create="yes"
 		fi
 	else
-		if [ -e ${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2 ]
+		if [ -e ${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.xz ]
 		then
-			write_log "Extracting the additional packages 'additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2' from cache. now."
-			tar_all extract "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2" "${qemu_mnt_dir}/var/cache/apt/" 
-		elif [ ! -e "${output_dir}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2" ]
+			write_log "Extracting the additional packages 'additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.xz' from cache. now."
+			tar_all extract "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.xz" "${qemu_mnt_dir}/var/cache/apt/" 
+		elif [ ! -e "${output_dir}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.xz" ]
 		then
 			write_log "No compressed additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless archive found in cache directory.
 Creating it now!"
@@ -611,7 +613,7 @@ END
 if [ ! -z \"${swap_partition}\" ]
 then
 	cat <<END >> /etc/fstab 2>>/debootstrap_stg2_errors.txt
-${swap_partition}	swap	swap	defaults,pri=0	0	0
+${swap_partition}	swap	swap	defaults,pri=10	0	0
 END
 fi
 
@@ -625,6 +627,7 @@ END
 sed -i 's/^\([1-6]:.* tty[1-6]\)/#\1/' /etc/inittab 2>>/debootstrap_stg2_errors.txt
 echo '#T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
 #echo 'T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
+#echo 'T0:2345:respawn:/sbin/getty -L ${qemu_console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
 
 rm /debootstrap_pt2.sh
 exit 0" > ${qemu_mnt_dir}/debootstrap_pt2.sh
@@ -651,9 +654,9 @@ then
 	cd ${qemu_mnt_dir}/var/cache/apt/
 	if [ -z "${wireless_interface}" ]
 	then
-		tar_all compress "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.bz2" .
+		tar_all compress "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.${tar_format}" .
 	else
-		tar_all compress "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.bz2" .
+		tar_all compress "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.${tar_format}" .
 	fi
 	write_log "Successfully created compressed cache archive of additional packages."
 	cd ${output_dir}
@@ -739,7 +742,7 @@ if [ ! -z "${module_load_list}" ]
 then
 	for i in ${module_load_list}
 	do
-		cat<<END>>${output_dir}/mnt_debootstrap/etc/modules 2>>/debootstrap_stg2_errors.txt
+		cat<<END>>${output_dir}/mnt_debootstrap/etc/modules 2>>/post_debootstrap_config_errors.txt
 ${i} 
 END
 	done
@@ -763,28 +766,30 @@ cat <<END > /etc/rc.local 2>>/compressed_swapspace_setup_errors.txt
 # By default this script does nothing." > ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 	if [ "${compressed_swapspace_module_name}" = "ramzswap" ]
 	then
-		echo "modprobe ${compressed_swapspace_module_name} num_devices=2 disksize_kb=`expr ${compressed_swapspace_size_MB} \* 1024`
-sleep 1 
-swapon -p 100 /dev/ramzswap0
-swapon -p 100 /dev/ramzswap1
-mkswap /dev/ramzswap0
-mkswap /dev/ramzswap1
-${led_boot_green}
+		echo "modprobe ${compressed_swapspace_module_name} ${compressed_swapspace_nr_option_name}=${compressed_swapspace_blkdev_count} disksize_kb=`expr ${compressed_swapspace_size_MB} \* 1024`
+sleep 1
+for i in {1..${compressed_swapspace_blkdev_count}}
+do 
+	mkswap -L compressed_swap_${i} /dev/ramzswap${i}
+	sleep 1
+	swapon -p ${compressed_swapspace_priority} /dev/ramzswap${i}
+done
 exit 0
 END
 
 exit 0" >> ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 	elif [ "${compressed_swapspace_module_name}" = "zram" ]
 	then
-		echo "modprobe ${compressed_swapspace_module_name} num_devices=2
+		echo "modprobe ${compressed_swapspace_module_name} ${compressed_swapspace_nr_option_name}=${compressed_swapspace_blkdev_count}
 sleep 1
-echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram0/disksize
-echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram1/disksize
-mkswap /dev/zram0
-mkswap /dev/zram1
-swapon -p 100 /dev/zram0
-swapon -p 100 /dev/zram1
-${led_boot_green}
+for i in {1..${compressed_swapspace_blkdev_count}}
+do 
+	echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram${i}/disksize
+	sleep 1
+	mkswap -L compressed_swap /dev/zram${i}
+	sleep 1
+	swapon -p ${compressed_swapspace_priority} /dev/zram${i}
+done
 exit 0
 END
 
@@ -799,6 +804,16 @@ chmod +x ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 date_cur=`date` # needed further down as a very important part to circumvent the PAM Day0 change password problem
 
 echo "#!/bin/bash
+dd if=/dev/zero of=/swapfile bs=1M count=${qemu_mem_size}   ### swapfile, the same size as the qemu memory setting
+mkswap /swapfile
+chown root:root /swapfile
+chmod 0600 /swapfile
+
+if [ -e /dev/zram0 ]
+then
+	swapon -p 32767 /dev/zram0
+fi
+swapon -p 10 /swapfile
 
 date -s \"${date_cur}\" 2>>/post_debootstrap_errors.txt	# set the system date to prevent PAM from exhibiting its nasty DAY0 forced password change
 apt-get -y --force-yes install ${additional_packages} 2>>/post_debootstrap_errors.txt
@@ -918,8 +933,10 @@ passwd -w -1 root 2>>/post_debootstrap_errors.txt
 echo -e \"${user_password}\n${user_password}\n\n\n\n\n\n\n\" | adduser ${username} 2>>/post_debootstrap_errors.txt
 
 sed -i 's<#T0:2345:respawn:/sbin/getty<T0:2345:respawn:/sbin/getty<g' /etc/inittab
+#sed -i 's<T0:2345:respawn:/sbin/getty -L ${qemu_console_device}<#\1<g' /etc/inittab
 dpkg -l >/installed_packages.txt
 df -ah > /disk_usage.txt
+
 reboot 2>>/post_debootstrap_errors.txt
 exit 0" > ${output_dir}/mnt_debootstrap/setup.sh
 chmod +x ${output_dir}/mnt_debootstrap/setup.sh
@@ -984,9 +1001,9 @@ then
 	qemu-system-${qemu_arch} -M ${qemu_machine_type} -cpu ${qemu_cpu_type} ${qemu_extra_options} -no-reboot -kernel ${output_dir}/qemu-kernel/zImage ${qemu_hdd_mount} -m ${qemu_mem_size} -append "${qemu_kernel_cmdline}" 2>qemu_error_log.txt
 	if [ "$?" = "0" ]
 	then
-		write_log "'qemu-system-arm' seems to have closed cleanly. DONE!"
+		write_log "'qemu-system-${qemu_arch}' seems to have closed cleanly. DONE!"
 	else
-		write_log "ERROR: '${machine_qemu_command}' returned error code '$?'.
+		write_log "ERROR: 'qemu-system-${qemu_arch}' returned error code '$?'.
 Exiting now!"
 		regular_cleanup
 		exit 51
@@ -1032,11 +1049,12 @@ mount ${output_dir}/${output_filename}.img ${qemu_mnt_dir} -o loop
 if [ "$?" = "0" ]
 then
 	cd ${qemu_mnt_dir}
-	if [ "${tar_format}" = "bz2" ]
+	if [ "${tar_format}" = "bz2" -o "${tar_format}" = "gz" -o "${tar_format}" = "xz" ]
 	then
-		tar_all compress "${output_dir}/${output_filename}.tar.${tar_format}" .
-	elif [ "${tar_format}" = "gz" ]
-	then
+		if [ -f ${qemu_mnt_dir}/usr/bin/qemu-user-static ]
+		then
+			rm ${qemu_mnt_dir}/usr/bin/qemu-user-static
+		fi
 		tar_all compress "${output_dir}/${output_filename}.tar.${tar_format}" .
 	else
 		write_log "Incorrect setting '${tar_format}' for the variable 'tar_format' in the general_settings.sh.
@@ -1086,64 +1104,94 @@ tar_all()
 {
 if [ "$1" = "compress" ]
 then
-	if [ -d "${2%/*}"  ] && [ -e "${3}" ]
+	if [ -d "${2%/*}"  ]
 	then
-		if [ "${2:(-8)}" = ".tar.bz2" ] || [ "${2:(-5)}" = ".tbz2" ]
+		if [ -d "${3}" -o -f "${3}" ]
 		then
-			tar -cpjf "${2}" "${3}"
-		elif [ "${2:(-7)}" = ".tar.gz" ] || [ "${2:(-4)}" = ".tgz" ]
-		then
-			tar -cpzf "${2}" "${3}"
+			if [ "${2:(-8)}" = ".tar.bz2" ] || [ "${2:(-5)}" = ".tbz2" ]
+			then
+				tar -cpjf "${2}" "${3}"
+			elif [ "${2:(-7)}" = ".tar.gz" ] || [ "${2:(-4)}" = ".tgz" ]
+			then
+				tar -cpzf "${2}" "${3}"
+			elif [ "${2:(-7)}" = ".tar.xz" ] || [ "${2:(-4)}" = ".txz" ]
+			then
+				tar -cpJf "${2}" "${3}"
+			else
+				write_log "ERROR: Created files can only be of type '.tar.gz', '.tgz', '.tbz2', or '.tar.bz2'!
+	Used call parameters were:
+	1: '${1}'
+	2: '${2}'
+	3: '${3}'
+	Exiting now!"
+				regular_cleanup
+				exit 37
+			fi
 		else
-			write_log "ERROR: Created files can only be of type '.tar.gz', '.tgz', '.tbz2', or '.tar.bz2'!
+			write_log "ERROR: Illegal argument '3' (what to compress).
 Used call parameters were:
 1: '${1}'
 2: '${2}'
 3: '${3}'
 Exiting now!"
 			regular_cleanup
-			exit 37
+			exit 38
 		fi
 	else
-		write_log "ERROR: Illegal arguments '2' and/or '3'.
+		write_log "ERROR: Illegal argument '2' (what archive to create).
 Used call parameters were:
 1: '${1}'
 2: '${2}'
 3: '${3}'
 Exiting now!"
 		regular_cleanup
-		exit 38
+		exit 39
 	fi
 elif [ "$1" = "extract" ]
 then
-	if [ -e "${2}"  ] && [ -d "${3}" ]
+	if [ -f "${2}"  ]
 	then
-		if [ "${2:(-8)}" = ".tar.bz2" ] || [ "${2:(-5)}" = ".tbz2" ]
+		if [ -d "${3}" ]
 		then
-			tar -xpjf "${2}" -C "${3}"
-		elif [ "${2:(-7)}" = ".tar.gz" ] || [ "${2:(-4)}" = ".tgz" ]
-		then
-			tar -xpzf "${2}" -C "${3}"
+			if [ "${2:(-8)}" = ".tar.bz2" ] || [ "${2:(-5)}" = ".tbz2" ]
+			then
+				tar -xpjf "${2}" -C "${3}"
+			elif [ "${2:(-7)}" = ".tar.gz" ] || [ "${2:(-4)}" = ".tgz" ]
+			then
+				tar -xpzf "${2}" -C "${3}"
+			elif [ "${2:(-7)}" = ".tar.xz" ] || [ "${2:(-4)}" = ".txz" ]
+			then
+				tar -xpJf "${2}" -C "${3}"
+			else
+				write_log "ERROR: Can only extract files of type '.tar.gz', '.tar.bz2', or 'tar.xz'!
+	'${2}' doesn't seem to fit that requirement.
+	Used call parameters were:
+	1: '${1}'
+	2: '${2}'
+	3: '${3}'
+	Exiting now!"
+				regular_cleanup
+				exit 40
+			fi
 		else
-			write_log "ERROR: Can only extract files of type '.tar.gz', or '.tar.bz2'!
-'${2}' doesn't seem to fit that requirement.
+			write_log "ERROR: Illegal arguments '3' (where to extract to).
 Used call parameters were:
 1: '${1}'
 2: '${2}'
 3: '${3}'
 Exiting now!"
 			regular_cleanup
-			exit 39
+		exit 41
 		fi
 	else
-		write_log "ERROR: Illegal arguments '2' and/or '3'.
+		write_log "ERROR: Illegal arguments '2' (what archive to extract).
 Used call parameters were:
 1: '${1}'
 2: '${2}'
 3: '${3}'
 Exiting now!"
 		regular_cleanup
-		exit 40
+		exit 42
 	fi
 else
 	write_log "ERROR: The first parameter needs to be either 'compress' or 'extract', and NOT '${1}'.
@@ -1153,7 +1201,7 @@ Used call parameters were:
 3: '${3}'
 Exiting now!"
 	regular_cleanup
-	exit 41
+	exit 43
 fi
 }
 
@@ -1374,6 +1422,7 @@ int_cleanup() # special treatment for script abort through interrupt ('ctrl-c'  
 	fi
 	rm -r ${output_dir}/drive 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
+	modprobe -r binfmt_misc
 	write_log "Exiting script now!"
 	exit 99
 }
@@ -1389,4 +1438,5 @@ regular_cleanup() # cleanup for all other error situations
 	fi
 	rm -r ${output_dir}/drive 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
+	modprobe -r binfmt_misc
 }

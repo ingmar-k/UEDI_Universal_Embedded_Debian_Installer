@@ -26,13 +26,25 @@ DEBUG="0" # Set to '1' to see all commands, while the script is running. Set to 
 ##########################################
 ##########################################
 
+############################################################
+################# Check for debugging mode #################
+######### And activate it, if set in settings file #########
+############################################################
+if [ "${DEBUG}" = "1" ]
+then
+	set -xv # set verbose mode and show executed commands 
+fi
+############################################################
+############################################################
+
+
 
 ##################################
 ######### MACHINE NAME: ##########
 ## SET YOUR TARGET MACHINE HERE ##
 ##################################
 ###
-machine_id="pogoplug-v3"
+machine_id="allwinner-a10"
 ###
 ##################################
 ##################################
@@ -42,12 +54,12 @@ machine_id="pogoplug-v3"
 ##### GENERAL BUILD SETTINGS: #####
 ###################################
 
-host_os="Ubuntu" # Debian or Ubuntu (YOU NEED TO EDIT THIS!) The system you are running THIS script on!
+host_os="Debian" # Debian or Ubuntu (YOU NEED TO EDIT THIS!) The system you are running THIS script on!
 
-build_target="emdebian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
+build_target="debian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
 build_target_version="testing" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
-target_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror address for debian or emdebian
-target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
+target_mirror_url="http://ftp.de.debian.org/debian/" # mirror address for debian or emdebian
+target_repositories="main contrib non-free" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
 current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
 output_filename="${build_target}_rootfs_${machine_id}_${current_date}" # base name of the output file (compressed rootfs)
@@ -79,15 +91,15 @@ std_locale="en_US.UTF-8" # initial language setting for console (alternatively f
 
 locale_list="en_US.UTF-8 de_DE.UTF-8" # list of locales to enable during configuration
 
-tar_format="bz2" # bz2(=bzip2) or gz(=gzip)
+tar_format="xz" # bz2(=bzip2), gz(=gzip) or xz(=xz)
 
 qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesystem will be mounted
 
 base_sys_cache_tarball="${machine_id}_${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
 
 ### Check these very carefully, if you experience errors while running 'check_n_install_prerequisites'
-apt_prerequisites_debian="emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on debian
-apt_prerequisites_ubuntu="debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on ubuntu
+apt_prerequisites_debian="libncurses5-dev emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on debian
+apt_prerequisites_ubuntu="libncurses5-dev debian-archive-keyring emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on ubuntu
 
 
 ### GENERAL NETWORK SETTINGS ###
@@ -97,16 +109,19 @@ nameserver_addr="192.168.2.1" # "141.82.48.1" (YOU NEED TO CHECK THIS!!!)
 ### Settings for compressed SWAP space in RAM ### 
 
 use_compressed_swapspace="yes" # Do you want to use a compressed SWAP space in RAM (can potentionally improve performance)?
-compressed_swapspace_module_name="zram" # name of the kernel module for compressed swapspace in RAM (could either be called 'ramzswap' or 'zram', depending on your kernel)
-compressed_swapspace_size_MB="32" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
-vm_swappiness="" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
+compressed_swapspace_module_name="zram" # Name of the kernel module for compressed swapspace in RAM (could either be called 'ramzswap' or 'zram', depending on your kernel)
+compressed_swapspace_nr_option_name="num_devices" # Depending on kernel version, this option can have slight differences (used to be 'num_devices', then zram_num_devices' and then 'num_devices' again.
+compressed_swapspace_blkdev_count="1" # Number of swap devices to create. Should be equal to the number of CPU cores.
+compressed_swapspace_priority="32767" # Priority for swap usage. The higher the priority (32767 being the biggest possible number), the more likely the swap gets used first.
+compressed_swapspace_size_MB="256" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
+vm_swappiness="85" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
 
 
 ####################################
 ##### SPECIFIC BUILD SETTINGS: #####
 ####################################
 
-clean_tmp_files="no" # delete the temporary files, when the build process is done?
+clean_tmp_files="yes" # delete the temporary files, when the build process is done?
 
 create_disk="yes" # create a bootable USB thumb drive after building the rootfs?
 
