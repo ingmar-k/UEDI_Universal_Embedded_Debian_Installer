@@ -217,8 +217,6 @@ ____________________________________________________"
 			shift
 		done
 else	
-	check_connectivity
-
 	write_log "Installing some packages, if needed."
 	
 	set -- ${apt_prerequisites}
@@ -232,6 +230,7 @@ else
 		else
 			write_log "Package '${1}' is not installed yet.
 Trying to install it now!"
+			check_connectivity
 			if [ ! "${apt_get_update_done}" = "true" ]
 			then
 				write_log "Running 'apt-get update' to get the latest package dependencies."
@@ -261,22 +260,6 @@ If your host system is not Ubuntu 10.XX based, this could lead to errors. Please
 				fi
 			fi
 		fi
-
-		if [ $1 = "qemu-user-static" ]
-		then
-			sh -c "dpkg -l|grep \"qemu-user-static\"|grep \"1.\"" >/dev/null
-			if [ $? = "0" ]
-			then
-				write_log "Sufficient version of package '${1}' found. Continueing..."
-			else
-				write_log "The installed version of package '${1}' is too old.
-You need to install a package with a version of at least 1.0.
-For example from the debian-testing ('http://packages.debian.org/search?keywords=qemu&searchon=names&suite=testing&section=all')
-respectively the Ubuntu precise ('http://packages.ubuntu.com/search?keywords=qemu&searchon=names&suite=precise&section=all') repositiories.
-Exiting now!"
-				exit 15
-			fi
-		fi
 		shift
 	done
 	
@@ -300,7 +283,12 @@ else
 fi
 
 write_log "Formatting the image file with the '${rootfs_filesystem_type}' filesystem."
-mkfs.${rootfs_filesystem_type} -F ${output_dir}/${output_filename}.img
+if [ "${rootfs_filesystem_type}" = "ext4" ]
+then
+	mkfs.${rootfs_filesystem_type} -E lazy_itable_init=0,lazy_journal_init=0 -F ${output_dir}/${output_filename}.img # disable ext4 lazy_initialization, in order to increase performance!
+else
+	mkfs.${rootfs_filesystem_type} -F ${output_dir}/${output_filename}.img
+fi
 if [ "$?" = "0" ]
 then
 	write_log "'${rootfs_filesystem_type}' filesystem successfully created on '${output_dir}/${output_filename}.img'."
@@ -437,8 +425,6 @@ fi
 apt-get update
 
 mknod /dev/${console_device} c 4 64	# for the serial console 2>>/debootstrap_stg2_errors.txt
-#mknod /dev/${qemu_console_device} c 204 64	# for the serial console 2>>/debootstrap_stg2_errors.txt
-#mknod /dev/mmcblk0 b 179 0 2>>/debootstrap_stg2_errors.txt
 
 cat <<END > /etc/network/interfaces
 auto lo ${interfaces_auto}
@@ -586,6 +572,17 @@ echo "#!/bin/bash
 export LANG=C 2>>/debootstrap_stg2_errors.txt
 apt-key update
 apt-get -d -y --force-yes install ${additional_packages} 2>>/debootstrap_stg2_errors.txt
+
+if [ ! -z \"${additional_devsktop_packages}\" ]
+then
+	apt-get -d -y --force-yes install ${additional_devsktop_packages} 2>>/debootstrap_stg2_errors.txt
+fi
+
+if [ ! -z \"${additional_dev_packages}\" ]
+then
+	apt-get -d -y --force-yes install ${additional_dev_packages} 2>>/debootstrap_stg2_errors.txt
+fi
+
 if [ ! -z \"${wireless_interface}\" ]
 then
 	apt-get -d -y --force-yes install ${additional_wireless_packages} 2>>/debootstrap_stg2_errors.txt
@@ -626,8 +623,6 @@ END
 
 sed -i 's/^\([1-6]:.* tty[1-6]\)/#\1/' /etc/inittab 2>>/debootstrap_stg2_errors.txt
 echo '#T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
-#echo 'T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
-#echo 'T0:2345:respawn:/sbin/getty -L ${qemu_console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
 
 rm /debootstrap_pt2.sh
 exit 0" > ${qemu_mnt_dir}/debootstrap_pt2.sh
@@ -770,9 +765,9 @@ cat <<END > /etc/rc.local 2>>/compressed_swapspace_setup_errors.txt
 sleep 1
 for i in {1..${compressed_swapspace_blkdev_count}}
 do 
-	mkswap -L compressed_swap_${i} /dev/ramzswap${i}
+	mkswap -L compressed_swap_\${i} /dev/ramzswap\${i}
 	sleep 1
-	swapon -p ${compressed_swapspace_priority} /dev/ramzswap${i}
+	swapon -p ${compressed_swapspace_priority} /dev/ramzswap\${i}
 done
 exit 0
 END
@@ -784,11 +779,11 @@ exit 0" >> ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 sleep 1
 for i in {1..${compressed_swapspace_blkdev_count}}
 do 
-	echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram${i}/disksize
+	echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram\${i}/disksize
 	sleep 1
-	mkswap -L compressed_swap /dev/zram${i}
+	mkswap -L compressed_swap_\${i} /dev/zram\${i}
 	sleep 1
-	swapon -p ${compressed_swapspace_priority} /dev/zram${i}
+	swapon -p ${compressed_swapspace_priority} /dev/zram\${i}
 done
 exit 0
 END
@@ -801,22 +796,40 @@ Setting for variable 'use_compressed_swapspace' was '${use_compressed_swapspace}
 fi
 chmod +x ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 
-date_cur=`date` # needed further down as a very important part to circumvent the PAM Day0 change password problem
+#date_cur=`date` # needed further down as a very important part to circumvent the PAM Day0 change password problem
 
 echo "#!/bin/bash
-dd if=/dev/zero of=/swapfile bs=1M count=${qemu_mem_size}   ### swapfile, the same size as the qemu memory setting
+dd if=/dev/zero of=/swapfile bs=1M count=`expr ${qemu_mem_size} \/ 2`   ### swapfile, the same size as the qemu memory setting
 mkswap /swapfile
 chown root:root /swapfile
 chmod 0600 /swapfile
+swapon -p 10 /swapfile
 
 if [ -e /dev/zram0 ]
 then
+	echo `expr ${qemu_mem_size} \/ 8 \* 6 \* 1024 \* 1024` > /sys/block/zram0/disksize
+	mkswap -L \"zram_swap\" /dev/zram0
+	sleep 1
 	swapon -p 32767 /dev/zram0
+else
+	echo -e \"\nNot using zram!\n\"
 fi
-swapon -p 10 /swapfile
 
-date -s \"${date_cur}\" 2>>/post_debootstrap_errors.txt	# set the system date to prevent PAM from exhibiting its nasty DAY0 forced password change
+swapon -s
+sleep 5
+
 apt-get -y --force-yes install ${additional_packages} 2>>/post_debootstrap_errors.txt
+
+if [ ! -z \"${additional_desktop_packages}\" ]
+then
+	apt-get -y --force-yes install ${additional_desktop_packages} 2>>/debootstrap_stg2_errors.txt
+fi
+
+if [ ! -z \"${additional_dev_packages}\" ]
+then
+	apt-get -y --force-yes install ${additional_dev_packages} 2>>/debootstrap_stg2_errors.txt
+fi
+
 if [ ! -z \"${wireless_interface}\" ]
 then
 	apt-get -y --force-yes install ${additional_wireless_packages} 2>>/debootstrap_stg2_errors.txt
@@ -923,14 +936,14 @@ END
 
 ldconfig
 
-
-
 echo -e \"${root_password}\n${root_password}\n\" | passwd root 2>>/post_debootstrap_errors.txt
 passwd -u root 2>>/post_debootstrap_errors.txt
 passwd -x -1 root 2>>/post_debootstrap_errors.txt
 passwd -w -1 root 2>>/post_debootstrap_errors.txt
 
 echo -e \"${user_password}\n${user_password}\n\n\n\n\n\n\n\" | adduser ${username} 2>>/post_debootstrap_errors.txt
+
+dpkg-reconfigure tzdata
 
 sed -i 's<#T0:2345:respawn:/sbin/getty<T0:2345:respawn:/sbin/getty<g' /etc/inittab
 #sed -i 's<T0:2345:respawn:/sbin/getty -L ${qemu_console_device}<#\1<g' /etc/inittab
@@ -1028,6 +1041,8 @@ write_log "Compressing the rootfs now!"
 mount |grep ${output_dir}/${output_filename}.img 2>/dev/null
 if [ ! "$?" = "0" ]
 then 
+	write_log "Running 'fsck' on the temporary rootfs, now.
+Please be patient! This could take some time (depending on the image size)."
 	fsck.${rootfs_filesystem_type} -fy ${output_dir}/${output_filename}.img
 	if [ "$?" = "0" ]
 	then
@@ -1055,7 +1070,10 @@ then
 		then
 			rm ${qemu_mnt_dir}/usr/bin/qemu-user-static
 		fi
-		tar_all compress "${output_dir}/${output_filename}.tar.${tar_format}" .
+		write_log "Successfully mounted the created filesystem.
+Now compressing it into a single archive file '${output_dir}/${output_filename}.tar.${tar_format}'.
+Please be patient! This could take some time (depending on the image size)."
+		tar_all compress "${output_dir}/${output_filename}.tar.${tar_format}" . && write_log "Compression finished without errors. Archive file ready!"
 	else
 		write_log "Incorrect setting '${tar_format}' for the variable 'tar_format' in the general_settings.sh.
 Please check! Only valid entries are 'bz2' or 'gz'. Could not compress the Rootfs!"
@@ -1324,7 +1342,13 @@ fi
 
 if [ "${file_path:0:7}" = "http://" ] || [ "${file_path:0:8}" = "https://" ] || [ "${file_path:0:6}" = "ftp://" ] || [ "${file_path:0:6}" = "git://" ] || [ "${file_path:0:3}" = "-b " ] 
 then
-	check_connectivity
+	if [ "${use_cache}" = "yes" ]
+	then
+		if [ ! -f ${output_dir_base}/cache/${file_name} ]
+		then
+			check_connectivity
+		fi
+	fi
 	if [ -d ${output_path} ]
 	then
 		cd ${output_path}
@@ -1422,7 +1446,6 @@ int_cleanup() # special treatment for script abort through interrupt ('ctrl-c'  
 	fi
 	rm -r ${output_dir}/drive 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
-	modprobe -r binfmt_misc
 	write_log "Exiting script now!"
 	exit 99
 }
@@ -1438,5 +1461,4 @@ regular_cleanup() # cleanup for all other error situations
 	fi
 	rm -r ${output_dir}/drive 2>/dev/null
 	rm -r ${output_dir}/qemu-kernel 2>/dev/null
-	modprobe -r binfmt_misc
 }

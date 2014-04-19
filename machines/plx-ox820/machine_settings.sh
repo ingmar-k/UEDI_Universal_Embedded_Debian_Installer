@@ -37,6 +37,31 @@
 ##### Oxnas 820 BUILD SETTINGS: #####
 #####################################
 
+build_target="emdebian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
+build_target_version="stable" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
+target_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror address for debian or emdebian
+target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
+
+current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
+output_filename="${build_target}_rootfs_${machine_id}_${current_date}" # base name of the output file (compressed rootfs)
+output_dir_base="/home/${LOG_NAME}/${machine_id}_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
+########## Necessary check and setting output_dir #############
+echo ${output_dir_base} |grep '//' >/dev/null
+if [ "$?" = "0" ]
+then
+	echo "ERROR! Please check the script variable 'output_dir_base' in the 'general_settings.sh' file.
+It seems like there was a empty variable (LOG_NAME???), which led to a wrong path description. Exiting now."
+	exit 95
+fi
+if [ "${output_dir_base:(-1):1}" = "/" ]
+then
+	output_dir="${output_dir_base}build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+else
+	output_dir="${output_dir_base}/build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+fi
+##################################################################
+
+
 ### These settings MUST be checked/edited ###
 machine_mac_address="00:00:00:00:00:00" # !!!VERY IMPORTANT!!! (YOU NEED TO EDIT THIS!) Without a valid MAC address, your device won't be accessible via LAN
 

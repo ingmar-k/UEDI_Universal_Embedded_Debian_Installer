@@ -11,8 +11,8 @@
 ############################################################################
 ############################################################################
 ############################################################################
-###       _    _ _          _                            _    _  ___     ### 
-###      / \  | | |_      _(_)_ __  _ __   ___ _ __     / \  / |/ _ \    ### 
+###       _    _ _          _                            _    _  ___     ###
+###      / \  | | |_      _(_)_ __  _ __   ___ _ __     / \  / |/ _ \    ###
 ###     / _ \ | | \ \ /\ / / | '_ \| '_ \ / _ \ '__|   / _ \ | | | | |   ###
 ###    / ___ \| | |\ V  V /| | | | | | | |  __/ |     / ___ \| | |_| |   ###
 ###   /_/   \_\_|_| \_/\_/ |_|_| |_|_| |_|\___|_|    /_/   \_\_|\___/    ###
@@ -38,6 +38,30 @@
 
 ### These settings MUST be checked/edited ###
 
+build_target="debian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
+build_target_version="unstable" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
+target_mirror_url="http://ftp.de.debian.org/debian/" # mirror address for debian or emdebian
+target_repositories="main contrib non-free" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
+
+current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
+output_filename="${build_target}_rootfs_${machine_id}_${current_date}" # base name of the output file (compressed rootfs)
+output_dir_base="/home/${LOG_NAME}/${machine_id}_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
+########## Necessary check and setting output_dir #############
+echo ${output_dir_base} |grep '//' >/dev/null
+if [ "$?" = "0" ]
+then
+	echo "ERROR! Please check the script variable 'output_dir_base' in the 'general_settings.sh' file.
+It seems like there was a empty variable (LOG_NAME???), which led to a wrong path description. Exiting now."
+	exit 95
+fi
+if [ "${output_dir_base:(-1):1}" = "/" ]
+then
+	output_dir="${output_dir_base}build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+else
+	output_dir="${output_dir_base}/build_${current_date}" # Subdirectory for each build-run, ending with the unified Unix-Timestamp (seconds passed since Jan 01 1970)
+fi
+##################################################################
+
 console_device="ttyS0" # Device used for the serial console (usually 'ttyS0')
 console_baudrate="115200" # Baudrate to use for the serial console (often '115200')
 
@@ -46,14 +70,17 @@ machine_ubuntu_prereq="" # Here you can specify any machine specific prerequisit
 
 machine_debootstrap_arch="armhf" # Architecture setting for debootstrap. For example 'armel' for ARMv5 and 'armhf' for ARMv7.
 deb_add_packages="apt-utils,dialog,locales,udev,dictionaries-common,aspell" # packages to directly include in the first debootstrap stage
-additional_packages="rsyslog u-boot-tools file manpages man-db module-init-tools isc-dhcp-client netbase ifupdown iproute iputils-ping net-tools wget vim nano hdparm rsync bzip2 p7zip unrar unzip zip p7zip-full screen less usbutils psmisc strace info ethtool python whois time ruby procps perl parted ftp gettext firmware-linux-free firmware-linux-nonfree rcconf lrzsz libpam-modules util-linux mtd-utils mesa-utils libopenvg1-mesa libegl1-mesa-drivers libegl1-mesa libgles2-mesa ntp ntpdate iotop powertop task-lxde-desktop pcmanfm icedove filezilla atool xarchiver git subversion build-essential autoconf automake make libtool xorg-dev xutils-dev libdrm-dev libxcb-dri2-0-dev libglew-dev" # List of packages (each seperated by a single space) that get added to the rootfs
+additional_packages="rsyslog u-boot-tools file manpages man-db module-init-tools isc-dhcp-client netbase ifupdown iproute iputils-ping net-tools wget vim nano hdparm rsync bzip2 p7zip unrar unzip zip p7zip-full screen less usbutils psmisc strace info ethtool python whois time ruby procps perl parted ftp gettext firmware-linux-free firmware-linux-nonfree rcconf lrzsz libpam-modules util-linux mtd-utils mesa-utils libopenvg1-mesa libegl1-mesa-drivers libegl1-mesa libgles2-mesa ntp ntpdate iotop powertop atool" # List of packages (each seperated by a single space) that get added to the rootfs
+additional_dev_packages="git subversion build-essential autoconf automake make libtool xorg-dev xutils-dev libdrm-dev libxcb-dri2-0-dev libglew-dev"
+additional_desktop_packages="task-lxde-desktop pcmanfm icedove filezilla xarchiver"
 additional_wireless_packages="firmware-realtek wireless-tools iw wpasupplicant" # packages for wireless lan; mostly for the Pogoplug V3 Pro
 
 module_load_list="ump mali drm mali_drm" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
-ethernet_interface="eth0" # (IMPORTANT!!!) What ethernet interface exists on your device? (for example 'eth0' for standard ethernet)
-interfaces_auto="eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot (except for lo, which will be included automatically); if you don't list the needed interfaces here, you will have to enable them manually, after booting
-wireless_interface="wlan0" # (IMPORTANT!!!) What wireless interface exists on your device? (for example 'wlan0' for standard wireless)
+#ethernet_interface="eth0" # (IMPORTANT!!!) What ethernet interface exists on your device? (for example 'eth0' for standard ethernet)
+#wireless_interface="wlan0" # (IMPORTANT!!!) What wireless interface exists on your device? (for example 'wlan0' for standard wireless)
+#interfaces_auto="eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot (except for lo, which will be included automatically); if you don't list the needed interfaces here, you will have to enable them manually, after booting
+
 
 rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs be?
 # ATTENTION: Your kernel has to support the filesystem-type that you specify here. Otherwise the Pogoplug won't boot.
@@ -78,7 +105,7 @@ work_image_size_MB="6144" # size of the temporary image file, in which the insta
 ##### QEMU SETTINGS: #####
 ##########################
 
-qemu_console_device="ttyAMA0"
+qemu_console_device="ttyAMA0" # when running qemu in '-nographic' and/or '-curses' mode, this is needed to see some output
 
 qemu_arch="arm" # What base architecture do you need qemu to emulate? For example 'arm'.
 
@@ -88,11 +115,13 @@ qemu_cpu_type="cortex-a8" # What specific cpu-type should be emulated?
 
 qemu_mem_size="512" # How much RAM to hand to the qemu cirtual system?
 
-qemu_extra_options="-rtc base=localtime,clock=host -serial stdio -curses" # Here you can specify extra machine specific options for qemu. You can also leave it empty.
+#qemu_extra_options="-rtc base=localtime,clock=host -serial stdio -nographic" # Here you can specify extra machine specific options for qemu. You can also leave it empty.
+qemu_extra_options="-rtc base=localtime,clock=host -serial stdio" # Here you can specify extra machine specific options for qemu. You can also leave it empty.
 
 qemu_hdd_mount="-drive file=${output_dir}/${output_filename}.img,if=sd,cache=unsafe,aio=native,discard=ignore" # How to use the rootfs image in qemu? For example as IDE disk '-hda xxx.img'.
 
-qemu_kernel_cmdline="console=${qemu_console_device} root=/dev/mmcblk0 rw rootfstype=${rootfs_filesystem_type} rootwait mem=512M" # What commandline to pass to the qemu-kernel, when running the virtual qemu system?
+#qemu_kernel_cmdline="console=${qemu_console_device} root=/dev/mmcblk0 rw rootfstype=${rootfs_filesystem_type} rootwait mem=512M" # What commandline to pass to the qemu-kernel, when running the virtual qemu system?
+qemu_kernel_cmdline="console=${console_device} root=/dev/mmcblk0 rw rootfstype=${rootfs_filesystem_type} rootwait mem=512M" # What commandline to pass to the qemu-kernel, when running the virtual qemu system?
 
 
 
@@ -164,7 +193,6 @@ libvdpau_sunxi_git_tarball="libvdpau-sunxi.tar.xz"
 
 
 
-
 ####################################
 ##### SPECIFIC BUILD SETTINGS: #####
 ####################################
@@ -176,16 +204,21 @@ size_boot_partition="16" # size of the boot partition, in MB (MegaByte)
 size_swap_partition="512"   # size of the swap partition, in MB (MegaByte)
 size_wear_leveling_spare="512" ## size of spare space to leave for advanced usb thumb drive flash wear leveling, in MB (MegaByte); leave empty for normal hdds
 size_alignment="1" ## size of spare space before the root partitionto starts (in MegaByte); also leave empty for normal hdds
+## The spare space defined in 'size_alignment' is also used for U-Boot, so keep that in mind!!! In case of errors, check this!
 
-
+### Settings for compressed SWAP space in RAM ### 
+use_compressed_swapspace="yes" # Do you want to use a compressed SWAP space in RAM (can potentionally improve performance)?
+compressed_swapspace_module_name="zram" # Name of the kernel module for compressed swapspace in RAM (could either be called 'ramzswap' or 'zram', depending on your kernel)
+compressed_swapspace_nr_option_name="num_devices" # Depending on kernel version, this option can have slight differences (used to be 'num_devices', then zram_num_devices' and then 'num_devices' again.
+compressed_swapspace_blkdev_count="1" # Number of swap devices to create. Should be equal to the number of CPU cores.
+compressed_swapspace_priority="32767" # Priority for swap usage. The higher the priority (32767 being the biggest possible number), the more likely the swap gets used first.
+compressed_swapspace_size_MB="256" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
+vm_swappiness="85" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
 
 ##########################
 ##### BOOT SETTINGS: #####
 ##########################
 
-# set the following option to 'yes', if you want to create a rootfs on a SATA drive, sd card or anything similar, that needs an external bootloader, in order to boot from it.
-external_bootloader="yes" 
-# However, if you want to boot from a memory device that the internal bootloader already supports, then be sure to set the option ABOVE to 'no' !!!
 bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner_A10/bootloader/u-boot-ba_10_tv_box.tar.xz" # Archive that contains all necessary bootlaoder files
 bootloader_script_bin="/home/celemine1gig/Allwinner/A10/BA_10_TV_BOX/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
 
@@ -195,5 +228,3 @@ bootloader_script_bin="/home/celemine1gig/Allwinner/A10/BA_10_TV_BOX/script_bin/
 ####################################
 
 default_rootfs_package="" # filename of the default rootfs-archive for the '--install' call parameter
-
-

@@ -57,7 +57,7 @@ then
 	cd /root/mali_build/libdri2 2>>/mali_drv_compile_errors.txt
 	if [ \"\${?}\" = \"0\" ]
 	then
-		echo \"Successfully changed into directory '`pwd`'.\" && echo \"Successfully changed into directory '`pwd`'.\" >> /mali_drv_compile.txt 
+		echo \"Successfully changed into directory '\`pwd\`'.\" && echo \"Successfully changed into directory '\`pwd\`'.\" >> /mali_drv_compile.txt 
 		./autogen.sh 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'autogen.sh' (libdri2) command.\" && echo \"Successfully ran the 'autogen.sh' (libdri2) command.\" >> /mali_drv_compile.txt
 		./configure --prefix=/usr --x-includes=/usr/include --x-libraries=/usr/lib 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the configuration for libdri2.\" && echo \"Successfully ran the configuration for libdri2.\" >> /mali_drv_compile.txt
 		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (libdri2) command.\" && echo \"Successfully ran the 'make' (libdri2) command.\" >> /mali_drv_compile.txt
@@ -70,7 +70,7 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 	cd /root/mali_build/sunxi-mali 2>>/mali_drv_compile_errors.txt
 	if [ \"\${?}\" = \"0\" ]
 	then
-		echo \"Changed directory to '`pwd`'.\" && echo \"Changed directory to '`pwd`'.\" >> /mali_drv_compile.txt
+		echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
 		make config VERSION=${mali_module_version} ABI=armhf EGL_TYPE=x11 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make config' command of 'sunxi-mali'.\" >> /mali_drv_compile.txt
 		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (sunxi-mali) command.\" && echo \"Successfully ran the 'make' (sunxi-mali) command.\" >> /mali_drv_compile.txt
 		make install 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make install' (sunxi-mali) command.\" && echo \"Successfully ran the 'make install' (sunxi-mali) command.\" >> /mali_drv_compile.txt
@@ -79,7 +79,7 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 Please investigate!\" >>/mali_drv_compile_errors.txt
 	fi
 	
-	cd lib/sunxi-mali-proprietary && echo \"Changed directory to '`pwd`'.\" && echo \"Changed directory to '`pwd`'.\" >> /mali_drv_compile.txt
+	cd lib/sunxi-mali-proprietary && echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
 	if [ \"\${?}\" = \"0\" ]
 	then
 		make VERSION=${mali_module_version} ABI=armhf EGL_TYPE=x11 -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (sunxi-mali-proprietary) command.\" && echo \"Successfully ran the 'make' (sunxi-mali-proprietary) command.\" >> /mali_drv_compile.txt
@@ -91,7 +91,7 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 Please investigate!\" >>/mali_drv_compile_errors.txt
 	fi
 	
-	cd /root/mali_build/libump 2>>/mali_drv_compile_errors.txt && echo \"Changed directory to '`pwd`'.\" && echo \"Changed directory to '`pwd`'.\" >> /mali_drv_compile.txt
+	cd /root/mali_build/libump 2>>/mali_drv_compile_errors.txt && echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
 	if [ \"\${?}\" = \"0\" ]
 	then
 		autoreconf -i 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran autoreconf.\" && echo \"Successfully ran autoreconf.\" >> /mali_drv_compile.txt
@@ -106,7 +106,7 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 	cd /root/mali_build/xf86-video-fbturbo 2>>/mali_drv_compile_errors.txt
 	if [ \"\${?}\" = \"0\" ]
 	then
-		echo \"Changed directory to '`pwd`'.\" && echo \"Changed directory to '`pwd`'.\" >> /mali_drv_compile.txt
+		echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
 		autoreconf -vi 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran autoreconf.\" && echo \"Successfully ran autoreconf.\" >> /mali_drv_compile.txt
 		./configure --prefix=/usr 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the configuration for the 'xf86-video-fbturbo' driver.\" && echo \"Successfully ran the configuration for the 'xf86-video-fbturbo' driver.\" >> /mali_drv_compile.txt
 		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (xf86-video-fbturbo) command.\" && echo \"Successfully ran the 'make' (xf86-video-fbturbo) command.\" >> /mali_drv_compile.txt
@@ -120,7 +120,7 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 	cd /root/mali_build/libcedarx 2>>/mali_drv_compile_errors.txt
 	if [ \"\${?}\" = \"0\" ]
 	then
-		echo \"Changed directory to '`pwd`'.\" && echo \"Changed directory to '`pwd`'.\" >> /mali_drv_compile.txt
+		echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
 		./autogen.sh 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran 'libcedarx' autogen.sh.\" && echo \"Successfully ran 'libcedarx' autogen.sh.\" >> /mali_drv_compile.txt
 		./configure --host=arm-linux-gnueabihf --prefix=/usr 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran 'libcedarx' configure.\" && echo \"Successfully ran 'libcedarx' configure.\" >> /mali_drv_compile.txt
 		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran 'libcedarx' make.\" && echo \"Successfully ran 'libcedarx' make.\" >> /mali_drv_compile.txt
@@ -133,7 +133,7 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 	cd /root/mali_build/libvdpau-sunxi 2>>/mali_drv_compile_errors.txt
 	if [ \"\${?}\" = \"0\" ]
 	then
-		echo \"Changed directory to '`pwd`'.\" && echo \"Changed directory to '`pwd`'.\" >> /mali_drv_compile.txt
+		echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
 		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran 'libvdpau-sunxi' make.\" && echo \"Successfully ran 'libvdpau-sunxi' make.\" >> /mali_drv_compile.txt
 		make install 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran 'libvdpau-sunxi' make install.\" && echo \"Successfully ran 'libvdpau-sunxi' make install.\" >> /mali_drv_compile.txt
 		export VDPAU_DRIVER=sunxi && echo \"Successfully exported 'VDPAU_DRIVER=sunxi'.\" && echo \"Successfully exported 'VDPAU_DRIVER=sunxi'.\" >> /mali_drv_compile.txt
@@ -204,84 +204,98 @@ write_log "Machine specific, additional chroot system configuration successfully
 # Description: Get the SD-card device and than create the partitions and format them
 partition_n_format_disk()
 {
-device=""
+device="" # initalize 'device' as empty variable, to make sure
 echo "Now listing all available devices:
 "
 
 while [ -z "${device}" ]
 do
-parted -l
+	parted -l
 
-echo "
-Please enter the name of the SD-card device (eg. /dev/sdb) OR press ENTER to refresh the device list:"
+	read -t 60 -p "
+__________________________________________________
 
-read device
-if [ -e ${device} ] &&  [ "${device:0:5}" = "/dev/" ]
-then
-	umount ${device}*
-	mount |grep ${device}
-	if [ ! "$?" = "0" ]
+Please enter the name of the drive/card device (eg. /dev/sdb) OR press ENTER to refresh the device list:
+__________________________________________________
+
+" device
+
+	if [ ! -z "${device}" -a -e ${device} -a "${device:0:5}" = "/dev/" ]
 	then
-		echo "${device} partition table:"
-		parted -s ${device} unit MB print
-		echo "If you are sure that you want to repartition device '${device}', then type 'yes'.
-Type anything else and/or hit Enter to cancel!"
-		read affirmation
-		if [ "${affirmation}" = "yes" ]
+		umount ${device}* 2>/dev/null
+		mount |grep ${device} >/dev/null
+		if [ ! "$?" = "0" ]
 		then
-			if [ ! -z "${size_boot_partition}" ] && [ ! -z "${size_swap_partition}" ]
+			echo "'${device}' partition table:"
+			parted -s ${device} unit MB print
+			read -t 300 -p "
+__________________________________________________
+__________________________________________________
+		
+If you are sure that you want to repartition device '${device}', then please type 'yes'.
+Type anything else and/or hit Enter to cancel:
+__________________________________________________
+__________________________________________________
+
+" affirmation
+			if [ ! -z "${affirmation}" -a "${affirmation}" = "yes" ]
 			then
-				write_log "SD-card device set to '${device}', according to user input."
-				parted -s ${device} mklabel msdos
-				if [ ! -z "${size_wear_leveling_spare}" ]
+				if [ ! -z "${size_swap_partition}" ]
 				then
-					# first partition = boot (raw, size = ${size_boot_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary fat16 1 ${size_boot_partition}
-					# second partition = root (rest of the drive size)
-					parted --align=opt -- ${device} unit MiB mkpart primary ext4 ${size_boot_partition} -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
-					# last partition = swap (swap, size = ${size_swap_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
+					write_log "Card/drive device set to '${device}', according to user input."
+					parted -s ${device} mklabel msdos
+					if [ ! -z "${size_wear_leveling_spare}" ]
+					then
+						# first partition = boot (raw, size = ${size_boot_partition} )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary fat16 1 ${size_boot_partition}
+						# second partition = root (rest of the drive size)
+						parted --align=opt -- ${device} unit MiB mkpart primary ext4 ${size_boot_partition} -`expr ${size_swap_partition} + ${size_wear_leveling_spare}`
+						# last partition = swap (swap, size = ${size_swap_partition} )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -`expr ${size_swap_partition} + ${size_wear_leveling_spare}` -${size_wear_leveling_spare} 
+					else
+						# first partition = boot (raw, size = ${size_boot_partition} )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary fat16 1 ${size_boot_partition}
+						# second partition = root (rest of the drive size)
+						parted --align=opt -- ${device} unit MiB mkpart primary ext4 ${size_boot_partition} -${size_swap_partition}
+						# last partition = swap (swap, size = ${size_swap_partition} )
+						parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0 
+					fi
+					echo ">>> ${device} Partition table is now:"
+					parted -s ${device} unit MiB print
 				else
-					# first partition = boot (raw, size = ${size_boot_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary fat16 1 ${size_boot_partition}
-					# second partition = root (rest of the drive size)
-					parted --align=opt -- ${device} unit MiB mkpart primary ext4 ${size_boot_partition} -${size_swap_partition}
-					# last partition = swap (swap, size = ${size_swap_partition} )
-					parted -s --align=opt -- ${device} unit MiB mkpart primary linux-swap -${size_swap_partition} -0 
-				fi
-				echo ">>> ${device} Partition table is now:"
-				parted -s ${device} unit MiB print
-			else
-				write_log "ERROR! Either the setting for 'size_boot_partition', or for 'size_swap_partition' seems to be empty.
+					write_log "ERROR: The setting for 'size_swap_partition' seems to be empty.
 Exiting now!"
+					regular_cleanup
+					exit 29
+				fi
+			else
+				write_log "Action canceled by user, or timed out.
+Exiting now!
+You can rerun the drive creation (only) by using the '--install' or '-i' call parameter of this script!
+Just run 'sudo ./build_emdebian_debian_system.sh --help' for more information."
 				regular_cleanup
 				exit 29
 			fi
 		else
-			write_log "Action canceled by user. Exiting now!"
+			write_log "ERROR: Some partition on device '${device}' is still mounted.
+Exiting now!"
 			regular_cleanup
-			exit 29
+			exit 30
 		fi
 	else
-		write_log "ERROR! Some partition on device '${device}' is still mounted. Exiting now!"
-		regular_cleanup
-		exit 30
+		if [ ! -z "${device}" ] # in case of a refresh we don't want to see the error message ;-)
+		then 
+			write_log "ERROR: Device '${device}' doesn't seem to be a valid device!"
+		fi
+		device=""
 	fi
-else
-	if [ ! -z "${device}" ] # in case of a refresh we don't want to see the error message ;-)
-	then 
-		write_log "ERROR! Device '${device}' doesn't seem to be a valid device!"
-	fi
-	device=""
-fi
-
 done
 
 if [ -e ${device}1 ] && [ -e ${device}2 ] && [ -e ${device}3 ]
 then
-	mkfs.vfat -L boot ${device}1 # vfat on boot partition
-	mkfs.ext4 -L rootfs ${device}2 # ext4 on root partition
-	mkswap -L mmc_swap ${device}3 # swap
+	mkfs.vfat ${device}1 # vfat on boot partition
+	mkfs.ext4 -L "rootfs" ${device}2 # ext4 on root partition
+	mkswap -L "mmc_swap" ${device}3 # swap
 else
 	write_log "ERROR: There should be 3 partitions on '${device}', but one or more seem to be missing.
 Exiting now!"
@@ -301,9 +315,9 @@ finalize_disk()
 # Copy bootloader to the boot partition
 write_log "Getting the bootloader and trying to copy it to the boot partition, now!"
 
-get_n_check_file "${bootloader_package}" "bootloader_package" "${output_dir}/tmp"
-get_n_check_file "${bootloader_script_bin}" "bootloader_script_bin" "${output_dir}/tmp"
-tar_all extract "${output_dir}/tmp/${bootloader_package}" "${output_dir}/tmp"
+get_n_check_file "${bootloader_package}" "bootloader_package" "${output_dir}/tmp/"
+get_n_check_file "${bootloader_script_bin}" "bootloader_script_bin" "${output_dir}/tmp/"
+tar_all extract "${output_dir}/tmp/${bootloader_package##*/}" "${output_dir}/tmp/"
 
 if [ -e ${device} ] &&  [ "${device:0:5}" = "/dev/" ]
 then
@@ -311,32 +325,57 @@ then
 	mount |grep ${device}
 	if [ ! "$?" = "0" ]
 	then
-		if [ -e "${output_dir}/tmp/sunxi-spl.bin" ] # sunxi-spl.bin
+		if [ -f "${output_dir}/tmp/u-boot-sunxi-with-spl.bin" ] # combined file, containing both u-boot.img and sunxi-spl.bin in ONE single file
+		then
+			dd if=${output_dir}/tmp/u-boot-sunxi-with-spl.bin of=${device} bs=1024 seek=8
+			if [ "$?" = "0" ]
+			then
+				write_log "Combined bootloader file (u-boot-sunxi-with-spl.bin) successfully copied to SD-card ('${device}')!"
+			else
+				write_log "ERROR: Something went wrong While trying to copy the combined bootloader file 'u-boot-sunxi-with-spl.bin'
+to the device '${device}'. 'dd' exited with error code '$?'."
+			fi
+		elif [ -f "${output_dir}/tmp/sunxi-spl.bin" ] # sunxi-spl.bin (stage 1 bootloader for sd card booting)
 		then
 			dd if=${output_dir}/tmp/sunxi-spl.bin of=${device} bs=1024 seek=8
 			if [ "$?" = "0" ]
 			then
 				write_log "Bootloader part 1 (sunxi-spl.bin) successfully copied to SD-card ('${device}')!"
 			else
-				write_log "ERROR while trying to copy the bootloader part 1 'sunxi-spl.bin' to the device '${device}2'."
+				write_log "ERROR: Something went wrong While trying to copy the part 1 bootloader file 'sunxi-spl.bin'
+to the device '${device}'. 'dd' exited with error code '$?'."
 			fi
-		else
-			write_log "ERROR! Bootloader binary 'sunxi-spl.bin' doesn't seem to exist in directory '${output_dir}/tmp/'.
-			You won't be able to boot the card, without copying the file to the second partition."
-		fi
-
-		if [ -e "${output_dir}/tmp/u-boot.bin" ] # u-boot.bin
-		then
-			dd if=${output_dir}/tmp/u-boot.bin of=${device} bs=1024 seek=32
-			if [ "$?" = "0" ]
+			
+			if [ -f "${output_dir}/tmp/u-boot.bin" ] # u-boot.bin (only part of "older" U-Boot source code versions; superceeded by 'u-boot.img', see below!)
 			then
-				write_log "Bootloader part 2 (u-boot.bin) successfully copied to SD-card ('${device}')!"
+				dd if=${output_dir}/tmp/u-boot.bin of=${device} bs=1024 seek=32
+				if [ "$?" = "0" ]
+				then
+					write_log "Bootloader part 2 (u-boot.bin) successfully copied to SD-card ('${device}')!"
+				else
+					write_log "ERROR: Something went wrong While trying to copy the part 2 bootloader file 'u-boot.bin'
+to the device '${device}'. 'dd' exited with error code '$?'."
+				fi
+			elif [ -f "${output_dir}/tmp/u-boot.img" ] # u-boot.img, used in more recent versions of the sunxi U-Boot source code (instead of u-boot.bin)
+			then
+				dd if=${output_dir}/tmp/u-boot.img of=${device} bs=1024 seek=40
+				if [ "$?" = "0" ]
+				then
+					write_log "Bootloader part 2 (u-boot.img) successfully copied to SD-card ('${device}')!"
+				else
+					write_log "ERROR: Something went wrong While trying to copy the part 2 bootloader file 'u-boot.img'
+to the device '${device}'. 'dd' exited with error code '$?'."
+				fi
 			else
-				write_log "ERROR while trying to copy the bootloader part 2 'u-boot.bin' to the device '${device}2'."
+				write_log "ERROR: No stage 2 bootlaoder binary found.
+Neither 'u-boot.bin', nor 'u-boot.img' seem to exist in directory '${output_dir}/tmp/'.
+You won't be able to boot the card, without copying the file to the second partition.
+Please be sure to check this!"
 			fi
 		else
-			write_log "ERROR! Bootloader binary 'u-boot.bin' doesn't seem to exist in directory '${output_dir}/tmp/'.
-			You won't be able to boot the card, without copying the file to the second partition."
+			write_log "ERROR: Bootloader binary 'sunxi-spl.bin' doesn't seem to exist in directory '${output_dir}/tmp/'.
+You won't be able to boot the card, without copying the file to the second partition.
+Please be sure to check this!"
 		fi
 	else
 		write_log "ERROR! Some partition on device '${device}' is still mounted. Exiting now!"
@@ -352,38 +391,42 @@ fi
 
 write_log "Now unpacking the rootfs to the SD-card's root partition!"
 
-mkdir ${output_dir}/drive
-mkdir ${output_dir}/drive/boot
-mkdir ${output_dir}/drive/root
+mkdir -p ${output_dir}/drive/boot
+mkdir -p ${output_dir}/drive/root
 if [ "$?" = "0" ]
 then
 	fsck -fy ${device}1 # just to be sure
 	fsck -fy ${device}2 # just to be sure
 	mount ${device}1 ${output_dir}/drive/boot # TODO: check for mount error for this one, too!
+	if [ ! "$?" = "0" ]
+	then
+		write_log "ERROR while trying to mount '${device}1' to '${output_dir}/drive/boot'. Exiting now!"
+		regular_cleanup
+		exit 34
+	fi
 	mount ${device}2 ${output_dir}/drive/root
 	if [ "$?" = "0" ]
 	then
 		if [ -e ${output_dir}/${output_filename}.tar.${tar_format} ]
 		then 
 			tar_all extract "${output_dir}/${output_filename}.tar.${tar_format}" "${output_dir}/drive/root"
-			mv ${output_dir}/sd-card/root/uImage ${output_dir}/drive/boot/ 
-			cp ${output_dir}/tmp/${bootloader_script##*/} ${output_dir}/drive/boot/
-			cp ${output_dir}/tmp/${bootloader_script##*/} ${output_dir}/drive/boot/evb.bin
+			cp ${output_dir}/drive/root/uImage ${output_dir}/drive/boot/ 
+			cp ${output_dir}/tmp/${bootloader_script_bin##*/} ${output_dir}/drive/boot/			
 		else
 			write_log "ERROR: File '${output_dir}/${output_filename}.tar.${tar_format}' doesn't seem to exist. Exiting now!"
 			regular_cleanup
-			exit 34
+			exit 35
 		fi
 		sleep 1
 	else
 		write_log "ERROR while trying to mount '${device}2' to '${output_dir}/drive'. Exiting now!"
 		regular_cleanup
-		exit 35
+		exit 36
 	fi
 else
-	write_log "ERROR while trying to create the temporary directory '${output_dir}/drive'. Exiting now!"
+	write_log "ERROR while trying to create the temporary directory '${output_dir}/drive/root'. Exiting now!"
 	regular_cleanup
-	exit 36
+	exit 37
 fi
 
 sleep 3
@@ -393,8 +436,8 @@ umount ${output_dir}/drive/boot
 
 sleep 3
 write_log "Running fsck to make sure the filesystem on the card is fine."
-fsck -fy ${device}1 # final check
-fsck -fy ${device}2 # final check
+fsck -fy ${device}1 && write_log "'fsck' on '${device}1' finished without errors." # final check
+fsck -fy ${device}2 && write_log "'fsck' on '${device}2' finished without errors." # final check
 if [ "$?" = "0" ]
 then
 	write_log "SD-card successfully created!

@@ -151,6 +151,10 @@ Just creating a complete, fully bootable USB drive."
 		then
 			tar_format="gz"
 			output_filename="${rootfs_package_name%.tar.gz}"
+		elif [ "${rootfs_package_name:(-7)}" = ".tar.xz" ]
+		then
+			tar_format="xz"
+			output_filename="${rootfs_package_name%.tar.xz}"
 		else
 			write_log "The variable rootfs_package_name seems to point to a file that is neither a '.tar.bz2' nor a '.tar.gz' package.
 Please check! Exiting now."
