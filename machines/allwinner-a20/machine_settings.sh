@@ -77,9 +77,9 @@ additional_wireless_packages="firmware-realtek wireless-tools iw wpasupplicant" 
 
 module_load_list="ump mali drm mali_drm" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
-#ethernet_interface="eth0" # (IMPORTANT!!!) What ethernet interface exists on your device? (for example 'eth0' for standard ethernet)
-#wireless_interface="wlan0" # (IMPORTANT!!!) What wireless interface exists on your device? (for example 'wlan0' for standard wireless)
-#interfaces_auto="eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot (except for lo, which will be included automatically); if you don't list the needed interfaces here, you will have to enable them manually, after booting
+ethernet_interface="eth0" # (IMPORTANT!!!) What ethernet interface exists on your device? (for example 'eth0' for standard ethernet)
+wireless_interface="wlan0" # (IMPORTANT!!!) What wireless interface exists on your device? (for example 'wlan0' for standard wireless)
+interfaces_auto="eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot (except for lo, which will be included automatically); if you don't list the needed interfaces here, you will have to enable them manually, after booting
 
 
 rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs be?

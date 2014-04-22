@@ -44,8 +44,9 @@ write_log "Creating the udev rule for 'mali' and 'ump', now."
 echo "KERNEL==\"mali\", MODE=\"0660\", GROUP=\"video\"
 KERNEL==\"ump\", MODE=\"0660\", GROUP=\"video\"" > ${qemu_mnt_dir}/etc/udev/rules.d/50-mali.rules
 
-sed -i 's/^reboot//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt
-sed -i 's/^exit 0//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt
+sed -i 's/^reboot//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'reboot'
+sed -i 's/^exit 0//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # and the 'exit 0' from the standard script, in order to be able to concatenate further code lines before reboot and exit 
+sed -i 's|^exit 0|chmod 777 /dev/g2d\nchmod 777 /dev/disp\nchmod 777 /dev/cedar_dev\nexit 0|' ${qemu_mnt_dir}/etc/rc.local 2>>/post_debootstrap_config_errors.txt
 
 echo "
 echo \"Trying to compile the mali drivers and libraries, now.\"
@@ -150,15 +151,17 @@ ldconfig -v
 
 echo \"export XDG_CACHE_HOME=\"/dev/shm/.cache\"\" >> /home/${username}/.bashrc
 
-mv /etc/resolv.conf /etc/resolv.conf.bak
-touch /etc/resolv.conf
-
-mv /etc/network/interfaces /etc/network/interfaces.bak
-cat <<END > /etc/network/interfaces
+if [ ! -z \"${additional_desktop_packages}\" ] # undo network configuration for systems with a desktop environment, because the network manager handles the configuration there!!!
+then
+	mv /etc/resolv.conf /etc/resolv.conf.bak
+	touch /etc/resolv.conf
+	mv /etc/network/interfaces /etc/network/interfaces.bak
+	cat <<END > /etc/network/interfaces
 auto lo
 iface lo inet loopback
 END
 
+fi
 swapoff /swapfile
 swapoff /dev/zram0
 sleep 1
@@ -239,13 +242,14 @@ __________________________________________________
 			echo "'${device}' partition table:"
 			parted -s ${device} unit MB print
 			read -t 300 -p "
-__________________________________________________
-__________________________________________________
+##################################################
+##################################################
 		
 If you are sure that you want to repartition device '${device}', then please type 'yes'.
 Type anything else and/or hit Enter to cancel:
-__________________________________________________
-__________________________________________________
+
+##################################################
+##################################################
 
 " affirmation
 			if [ ! -z "${affirmation}" -a "${affirmation}" = "yes" ]

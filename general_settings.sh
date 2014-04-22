@@ -41,7 +41,7 @@ fi
 ## SET YOUR TARGET MACHINE HERE ##
 ##################################
 ###
-machine_id="allwinner-a20"
+machine_id="allwinner-a10"
 ###
 ##################################
 ##################################

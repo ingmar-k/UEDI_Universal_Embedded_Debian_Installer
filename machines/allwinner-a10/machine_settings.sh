@@ -72,14 +72,14 @@ machine_debootstrap_arch="armhf" # Architecture setting for debootstrap. For exa
 deb_add_packages="apt-utils,dialog,locales,udev,dictionaries-common,aspell" # packages to directly include in the first debootstrap stage
 additional_packages="rsyslog u-boot-tools file manpages man-db module-init-tools isc-dhcp-client netbase ifupdown iproute iputils-ping net-tools wget vim nano hdparm rsync bzip2 lbzip2 plzip pigz p7zip unrar unzip zip p7zip-full screen less usbutils psmisc strace info ethtool python whois time ruby perl parted ftp gettext rcconf lrzsz libpam-modules util-linux mtd-utils mesa-utils libopenvg1-mesa libgles2-mesa ntp ntpdate iotop powertop lbzip2" # List of packages (each seperated by a single space) that get added to the rootfs
 additional_dev_packages="git subversion build-essential autoconf automake make libtool xorg-dev xutils-dev libdrm-dev libxcb-dri2-0-dev libglew-dev"
-additional_desktop_packages="task-lxde-desktop pcmanfm icedove filezilla xarchiver smplayer vlc"
+additional_desktop_packages="task-lxde-desktop pcmanfm icedove filezilla xarchiver smplayer vlc mpv"
 additional_wireless_packages="firmware-realtek wireless-tools iw wpasupplicant" # packages for wireless lan
 
 module_load_list="ump mali drm mali_drm" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
-#ethernet_interface="eth0" # (IMPORTANT!!!) What ethernet interface exists on your device? (for example 'eth0' for standard ethernet)
-#wireless_interface="wlan0" # (IMPORTANT!!!) What wireless interface exists on your device? (for example 'wlan0' for standard wireless)
-#interfaces_auto="eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot (except for lo, which will be included automatically); if you don't list the needed interfaces here, you will have to enable them manually, after booting
+ethernet_interface="eth0" # (IMPORTANT!!!) What ethernet interface exists on your device? (for example 'eth0' for standard ethernet)
+wireless_interface="wlan0" # (IMPORTANT!!!) What wireless interface exists on your device? (for example 'wlan0' for standard wireless)
+interfaces_auto="eth0" # (IMPORTANT!!!) what network interfaces to bring up automatically on each boot (except for lo, which will be included automatically); if you don't list the needed interfaces here, you will have to enable them manually, after booting
 
 
 rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs be?
@@ -96,7 +96,7 @@ extra_files="" # some extra archives (list seperated by a single blank space!) t
 
 qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/linux-3.4.87-qemu-cortex-a8-1.1.tar.xz" # qemu kernel file name
 
-std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/3.4.86-ba10-tv-box-mali-r3p2-01rel2-1.1-dirty.tar.xz" # std kernel file name
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/3.4.86-hackberry-mali-r3p2-01rel2-1.0-dirty.tar.xz" # std kernel file name
 
 work_image_size_MB="6144" # size of the temporary image file, in which the installation process is carried out
 
@@ -219,8 +219,8 @@ vm_swappiness="" # (empty string makes the script ignore this setting and uses t
 ##### BOOT SETTINGS: #####
 ##########################
 
-bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/bootloader/u-boot-ba_10_tv_box.tar.xz" # Archive that contains all necessary bootlaoder files
-bootloader_script_bin="/home/celemine1gig/Allwinner/A10/BA_10_TV_BOX/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
+bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/bootloader/u-boot_Hackberry_22042014.tar.xz" # Archive that contains all necessary bootlaoder files
+bootloader_script_bin="/home/celemine1gig/Allwinner/A10/Hackberry/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
 
 
 ####################################
