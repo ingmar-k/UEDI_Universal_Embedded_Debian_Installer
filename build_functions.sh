@@ -123,7 +123,7 @@ check_connectivity()
 write_log "Checking internet connectivity, which is mandatory for the next step."
 for i in google.com kernel.org debian.org ubuntu.com linuxmint.com
 do
-	for j in {1..5}
+	for j in {1..3}
 	do
 		if [ "${j}" = "1" ]
 		then
@@ -395,7 +395,7 @@ else
 	write_log "ERROR: While trying to run the first part of the debootstrap operations an error occurred.
 'debootstrap' returned error code '$?'. Exiting now!"
 	regular_cleanup
-	exit 98
+	exit 95
 fi
 
 
@@ -505,10 +505,9 @@ cat <<END > /etc/rc.local 2>>/debootstrap_stg2_errors.txt
 #
 # By default this script does nothing.
 
-if [ -e /compressed_swapspace_setup.sh ]
+if [ -f /etc/init.d/compressed_swapspace.sh ]
 then
-	/compressed_swapspace_setup.sh 2>/compressed_swapspace_setup_log.txt
-	rm /compressed_swapspace_setup.sh
+	update-rc.d compressed_swapspace.sh defaults 2>>/debootstrap_stg2_errors.txt
 fi
 
 /setup.sh 2>/setup_log.txt && rm /setup.sh
@@ -542,40 +541,70 @@ fi
 
 if [ "${use_cache}" = "yes" ]
 then
-	if [ -z "${wireless_interface}" ]
+	add_pack_tarball_name="${add_pack_tarball_basename}"
+	if [ -z "${additional_desktop_packages}" -a -z "${additional_dev_packages}" -a -z "${additional_wireless_packagese}" ] # case 1: none (0)
 	then
-		if [ -e ${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.xz ]
-		then
-			write_log "Extracting the additional packages 'additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.xz' from cache. now."
-			tar_all extract "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.xz" "${qemu_mnt_dir}/var/cache/apt/" 
-		elif [ ! -e "${output_dir}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.xz" ]
-		then
-			write_log "No compressed 'additional_packages_${machine_id}_${build_target}_${build_target_version}' archive found in cache directory.
-Creating it now!"
-			add_pack_create="yes"
-		fi
+		write_log "No additional desktop, development and/or wireless packages were specified."
+	elif [ -z "${additional_desktop_packages}" -a -z "${additional_dev_packages}" -a ! -z "${additional_wireless_packages}" ] # case 2: only wifi (1)
+	then
+		add_pack_tarball_name="${add_pack_tarball_basename}_incl_wifi"
+		write_log "Additional wireless packages were specified."
+	elif [ -z "${additional_desktop_packages}" -a ! -z "${additional_dev_packages}" -a -z "${additional_wireless_packages}" ] # case 3: only dev (1)
+	then
+		add_pack_tarball_name="${add_pack_tarball_basename}_incl_dev"
+		write_log "Additional development packages were specified."
+	elif [ ! -z "${additional_desktop_packages}" -a -z "${additional_dev_packages}" -a -z "${additional_wireless_packages}" ] # case 4: only desktop (1)
+	then
+		add_pack_tarball_name="${add_pack_tarball_basename}_incl_desktop"
+		write_log "Additional desktop packages were specified."
+	elif [ ! -z "${additional_desktop_packages}" -a ! -z "${additional_dev_packages}" -a -z "${additional_wireless_packages}" ] # case 5: desktop and dev (2)
+	then
+		add_pack_tarball_name="${add_pack_tarball_basename}_incl_desktop_dev"
+		write_log "Additional desktop and development packages were specified."
+	elif [ -z "${additional_desktop_packages}" -a ! -z "${additional_dev_packages}" -a ! -z "${additional_wireless_packages}" ] # case 6: dev and wifi (2)
+	then
+		add_pack_tarball_name="${add_pack_tarball_basename}_incl_dev_wifi"
+		write_log "Additional development and wireless packages were specified."
+	elif [ ! -z "${additional_desktop_packages}" -a -z "${additional_dev_packages}" -a ! -z "${additional_wireless_packages}" ] # case 7: desktop and  wifi (2)
+	then
+		add_pack_tarball_name="${add_pack_tarball_basename}_incl_desktop_wifi"
+		write_log "Additional desktop and wireless packages were specified."
+	elif [ ! -z "${additional_desktop_packages}" -a ! -z "${additional_dev_packages}" -a ! -z "${additional_wireless_packages}" ] # case 8: all, desktop, dev and wifi (3)
+	then
+		add_pack_tarball_name="${add_pack_tarball_basename}_incl_desktop_dev_wifi"
+		write_log "Additional desktop, development and wireless packages were specified."
 	else
-		if [ -e ${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.xz ]
-		then
-			write_log "Extracting the additional packages 'additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.xz' from cache. now."
-			tar_all extract "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.xz" "${qemu_mnt_dir}/var/cache/apt/" 
-		elif [ ! -e "${output_dir}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.xz" ]
-		then
-			write_log "No compressed additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless archive found in cache directory.
-Creating it now!"
-			add_pack_create="yes"
-		fi
+		write_log "ERROR: No matching configuration of additional packages found.
+Exiting now!"
+		regular_cleanup
+		exit 96
 	fi
+
+	if [ -f ${output_dir_base}/cache/${add_pack_tarball_name}.tar.${tar_format} ]
+	then
+		write_log "Extracting additional packages archive '${add_pack_tarball_name}.tar.${tar_format}' from cache. now."
+		tar_all extract "${output_dir_base}/cache/${add_pack_tarball_name}.tar.${tar_format}" "${qemu_mnt_dir}/var/cache/apt/" 
+	elif [ ! -f ${output_dir_base}/cache/${add_pack_tarball_name}.tar.${tar_format} ]
+	then
+		write_log "No compressed archive '${add_pack_tarball_name}.tar.${tar_format}' found in the cache directory.
+Creating it now!"
+		add_pack_create="yes"
+	fi
+
 fi
 
 echo "#!/bin/bash
 export LANG=C 2>>/debootstrap_stg2_errors.txt
+
+echo \"${time_zone}\" > /etc/timezone
+dpkg-reconfigure --frontend noninteractive tzdata
+
 apt-key update
 apt-get -d -y --force-yes install ${additional_packages} 2>>/debootstrap_stg2_errors.txt
 
-if [ ! -z \"${additional_devsktop_packages}\" ]
+if [ ! -z \"${additional_desktop_packages}\" ]
 then
-	apt-get -d -y --force-yes install ${additional_devsktop_packages} 2>>/debootstrap_stg2_errors.txt
+	apt-get -d -y --force-yes install ${additional_desktop_packages} 2>>/debootstrap_stg2_errors.txt
 fi
 
 if [ ! -z \"${additional_dev_packages}\" ]
@@ -583,7 +612,7 @@ then
 	apt-get -d -y --force-yes install ${additional_dev_packages} 2>>/debootstrap_stg2_errors.txt
 fi
 
-if [ ! -z \"${wireless_interface}\" ]
+if [ ! -z \"${additional_wireless_packages}\" ]
 then
 	apt-get -d -y --force-yes install ${additional_wireless_packages} 2>>/debootstrap_stg2_errors.txt
 fi
@@ -604,21 +633,21 @@ cat <<END > /etc/fstab 2>>/debootstrap_stg2_errors.txt
 # /etc/fstab: static file system information.
 #
 # <file system> <mount point>   <type>  <options>       <dump>  <pass>
-/dev/root	/		${rootfs_filesystem_type}	defaults	0	1
+/dev/root	/	${rootfs_filesystem_type}	defaults	0	1
 END
 
 if [ ! -z \"${swap_partition}\" ]
 then
 	cat <<END >> /etc/fstab 2>>/debootstrap_stg2_errors.txt
-${swap_partition}	swap	swap	defaults,pri=10	0	0
+${swap_partition}	none	swap	defaults,pri=10	0	0
 END
 fi
 
 cat <<END >> /etc/fstab 2>>/debootstrap_stg2_errors.txt
-tmpfs		/tmp	tmpfs	defaults	0	0
-tmpfs		/var/spool	tmpfs	defaults,noatime,mode=1777	0	0
-tmpfs		/var/tmp	tmpfs	defaults	0	0
-tmpfs		/var/log	tmpfs	defaults,noatime,mode=0755	0	0
+none		/tmp	tmpfs	defaults	0	0
+none		/var/spool	tmpfs	defaults,noatime,mode=1777	0	0
+none		/var/tmp	tmpfs	defaults	0	0
+none		/var/log	tmpfs	defaults,noatime,mode=0755	0	0
 END
 
 sed -i 's/^\([1-6]:.* tty[1-6]\)/#\1/' /etc/inittab 2>>/debootstrap_stg2_errors.txt
@@ -647,12 +676,7 @@ if [ "${add_pack_create}" = "yes" ]
 then
 	write_log "Compressing additional packages, in order to save them in the cache directory."
 	cd ${qemu_mnt_dir}/var/cache/apt/
-	if [ -z "${wireless_interface}" ]
-	then
-		tar_all compress "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}.tar.${tar_format}" .
-	else
-		tar_all compress "${output_dir_base}/cache/additional_packages_${machine_id}_${build_target}_${build_target_version}_including_wireless.tar.${tar_format}" .
-	fi
+	tar_all compress "${output_dir_base}/cache/${add_pack_tarball_name}.tar.${tar_format}" .
 	write_log "Successfully created compressed cache archive of additional packages."
 	cd ${output_dir}
 fi
@@ -725,8 +749,6 @@ then
 			cp ${output_dir}/tmp/${bootloader_package##*/} ${output_dir_base}/cache/
 		fi
 	else
-		#tar_all extract "${output_dir}/tmp/${bootloader_package##*/}" "${output_dir}/tmp"
-		#sleep 1
 		get_n_check_file "${bootloader_package}" "external bootloader package" "${output_dir}/tmp"
 	fi
 	tar_all extract "${output_dir}/tmp/${bootloader_package##*/}" "${output_dir}/tmp"
@@ -745,58 +767,128 @@ fi
 
 if [ "${use_compressed_swapspace}" = "yes" ]
 then
-	echo "#!/bin/sh
-cat <<END > /etc/rc.local 2>>/compressed_swapspace_setup_errors.txt
-#!/bin/sh -e
-#
-# rc.local
-#
-# This script is executed at the end of each multiuser runlevel.
-# Make sure that the script will exit 0 on success or any other
-# value on error.
-#
-# In order to enable or disable this script just change the execution
-# bits.
-#
-# By default this script does nothing." > ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
 	if [ "${compressed_swapspace_module_name}" = "ramzswap" ]
 	then
-		echo "modprobe ${compressed_swapspace_module_name} ${compressed_swapspace_nr_option_name}=${compressed_swapspace_blkdev_count} disksize_kb=`expr ${compressed_swapspace_size_MB} \* 1024`
-sleep 1
-for i in {1..${compressed_swapspace_blkdev_count}}
-do 
-	mkswap -L compressed_swap_\${i} /dev/ramzswap\${i}
-	sleep 1
-	swapon -p ${compressed_swapspace_priority} /dev/ramzswap\${i}
-done
-exit 0
-END
+		echo "#!/bin/bash
 
-exit 0" >> ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
+### BEGIN INIT INFO
+# Provides: ramzswap
+# Required-Start:
+# Required-Stop:
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: ramzswap, compressed swapspace in RAM
+# Description: ramzswap provides a compressed swapspace in RAM, that can increase performance in memory limited systems (today it is mostly superceeded by 'zram')
+### END INIT INFO
+
+# Include lsb init-functions
+. /lib/lsb/init-functions
+
+start() {
+
+	modprobe ${compressed_swapspace_module_name} ${compressed_swapspace_nr_option_name}=${compressed_swapspace_blkdev_count} disksize_kb=`expr ${compressed_swapspace_size_MB} \* 1024`
+	sleep 1
+	for n in {1..${compressed_swapspace_blkdev_count}}
+	do
+		z=\`expr \${n} - 1\`
+		mkswap -L ramzswap_\${z} /dev/ramzswap\${z}
+		sleep 1
+		swapon -p ${compressed_swapspace_priority} /dev/ramzswap\${z}
+	done
+}
+
+stop() {
+	for n in {1..${compressed_swapspace_blkdev_count}}
+	do
+		z=\`expr \${n} - 1\`
+		swapoff /dev/ramzswap\${z}
+		sleep 1
+	done
+}
+
+case \"\$1\" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep 2
+        start
+        ;;
+    *)
+        echo \"Usage: \$0 {start|stop|restart}\"
+        RETVAL=1
+esac" > ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
 	elif [ "${compressed_swapspace_module_name}" = "zram" ]
 	then
-		echo "modprobe ${compressed_swapspace_module_name} ${compressed_swapspace_nr_option_name}=${compressed_swapspace_blkdev_count}
-sleep 1
-for i in {1..${compressed_swapspace_blkdev_count}}
-do 
-	echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram\${i}/disksize
-	sleep 1
-	mkswap -L compressed_swap_\${i} /dev/zram\${i}
-	sleep 1
-	swapon -p ${compressed_swapspace_priority} /dev/zram\${i}
-done
-exit 0
-END
+		echo "#!/bin/bash
 
-exit 0" >> ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
-	fi
+### BEGIN INIT INFO
+# Provides: zram
+# Required-Start:
+# Required-Stop:
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: zram, compressed swapspace in RAM
+# Description: zram provides a compressed swapspace in RAM, that can increase performance in memory limited systems
+### END INIT INFO
+
+# Include lsb init-functions
+. /lib/lsb/init-functions
+
+start() {
+	modprobe ${compressed_swapspace_module_name} ${compressed_swapspace_nr_option_name}=${compressed_swapspace_blkdev_count}
+	sleep 1
+	for n in {1..${compressed_swapspace_blkdev_count}}
+	do
+		z=\`expr \${n} - 1\`
+		echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram\${z}/disksize
+		sleep 1
+		mkswap -L zram_\${z} /dev/zram\${z}
+		sleep 1
+		swapon -p ${compressed_swapspace_priority} /dev/zram\${z}
+	done
+}
+
+stop() {
+	for n in {1..${compressed_swapspace_blkdev_count}}
+	do
+		z=\`expr \${n} - 1\`
+		swapoff /dev/zram\${z}
+		sleep 1
+	done
+}
+
+case \"\$1\" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        sleep 2
+        start
+        ;;
+    *)
+        echo \"Usage: \$0 {start|stop|restart}\"
+        RETVAL=1
+esac
+" > ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
 	else
-		write_log "Not using ZRAM.
+		write_log "ERROR: Variable 'use_compressed_swapspace' was set to 'yes, however
+NO VALID SETTING for 'compressed_swapspace_module_name' was found!
+Valid settings are either 'ramzswap', or 'zram'. You used a setting of '${compressed_swapspace_module_name}'."
+	fi
+else
+	write_log "Not using compressed swapspace.
 Setting for variable 'use_compressed_swapspace' was '${use_compressed_swapspace}'."
 fi
-chmod +x ${output_dir}/mnt_debootstrap/compressed_swapspace_setup.sh
-
-#date_cur=`date` # needed further down as a very important part to circumvent the PAM Day0 change password problem
+chmod +x ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
 
 echo "#!/bin/bash
 dd if=/dev/zero of=/swapfile bs=1M count=`expr ${qemu_mem_size} \/ 2`   ### swapfile, the same size as the qemu memory setting
@@ -830,7 +922,7 @@ then
 	apt-get -y --force-yes install ${additional_dev_packages} 2>>/debootstrap_stg2_errors.txt
 fi
 
-if [ ! -z \"${wireless_interface}\" ]
+if [ ! -z \"${additional_wireless_packages}\" ]
 then
 	apt-get -y --force-yes install ${additional_wireless_packages} 2>>/debootstrap_stg2_errors.txt
 fi
@@ -943,10 +1035,7 @@ passwd -w -1 root 2>>/post_debootstrap_errors.txt
 
 echo -e \"${user_password}\n${user_password}\n\n\n\n\n\n\n\" | adduser ${username} 2>>/post_debootstrap_errors.txt
 
-dpkg-reconfigure tzdata
-
 sed -i 's<#T0:2345:respawn:/sbin/getty<T0:2345:respawn:/sbin/getty<g' /etc/inittab
-#sed -i 's<T0:2345:respawn:/sbin/getty -L ${qemu_console_device}<#\1<g' /etc/inittab
 dpkg -l >/installed_packages.txt
 df -ah > /disk_usage.txt
 
@@ -994,7 +1083,6 @@ fi
 ### run machine specific configuration
 do_post_debootstrap_config_machine
 
-# umount all
 umount_img all
 if [ "$?" = "0" ]
 then
@@ -1128,13 +1216,13 @@ then
 		then
 			if [ "${2:(-8)}" = ".tar.bz2" ] || [ "${2:(-5)}" = ".tbz2" ]
 			then
-				tar -cpjf "${2}" "${3}"
+				tar -cpjvf "${2}" "${3}"
 			elif [ "${2:(-7)}" = ".tar.gz" ] || [ "${2:(-4)}" = ".tgz" ]
 			then
-				tar -cpzf "${2}" "${3}"
+				tar -cpzvf "${2}" "${3}"
 			elif [ "${2:(-7)}" = ".tar.xz" ] || [ "${2:(-4)}" = ".txz" ]
 			then
-				tar -cpJf "${2}" "${3}"
+				tar -cpJvf "${2}" "${3}"
 			else
 				write_log "ERROR: Created files can only be of type '.tar.gz', '.tgz', '.tbz2', or '.tar.bz2'!
 	Used call parameters were:
@@ -1173,13 +1261,13 @@ then
 		then
 			if [ "${2:(-8)}" = ".tar.bz2" ] || [ "${2:(-5)}" = ".tbz2" ]
 			then
-				tar -xpjf "${2}" -C "${3}"
+				tar -xpjvf "${2}" -C "${3}"
 			elif [ "${2:(-7)}" = ".tar.gz" ] || [ "${2:(-4)}" = ".tgz" ]
 			then
-				tar -xpzf "${2}" -C "${3}"
+				tar -xpzvf "${2}" -C "${3}"
 			elif [ "${2:(-7)}" = ".tar.xz" ] || [ "${2:(-4)}" = ".txz" ]
 			then
-				tar -xpJf "${2}" -C "${3}"
+				tar -xpJvf "${2}" -C "${3}"
 			else
 				write_log "ERROR: Can only extract files of type '.tar.gz', '.tar.bz2', or 'tar.xz'!
 	'${2}' doesn't seem to fit that requirement.

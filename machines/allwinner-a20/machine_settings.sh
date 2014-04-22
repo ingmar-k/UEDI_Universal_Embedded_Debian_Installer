@@ -8,18 +8,18 @@
 # warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License version 3 (GPLv3; http://www.gnu.org/licenses/gpl-3.0.html )
 # for more details.
 
-############################################################################
-############################################################################
-############################################################################
-###       _    _ _          _                            _    _  ___     ###
-###      / \  | | |_      _(_)_ __  _ __   ___ _ __     / \  / |/ _ \    ###
-###     / _ \ | | \ \ /\ / / | '_ \| '_ \ / _ \ '__|   / _ \ | | | | |   ###
-###    / ___ \| | |\ V  V /| | | | | | | |  __/ |     / ___ \| | |_| |   ###
-###   /_/   \_\_|_| \_/\_/ |_|_| |_|_| |_|\___|_|    /_/   \_\_|\___/    ###
-###                                                                      ###
-############################################################################
-############################################################################
-############################################################################
+################################################################################
+################################################################################
+################################################################################
+###       _    _ _          _                            _    ____   ___     ###
+###      / \  | | |_      _(_)_ __  _ __   ___ _ __     / \  |___ \ / _ \    ###
+###     / _ \ | | \ \ /\ / / | '_ \| '_ \ / _ \ '__|   / _ \   __) | | | |   ###
+###    / ___ \| | |\ V  V /| | | | | | | |  __/ |     / ___ \ / __/| |_| |   ###
+###   /_/   \_\_|_| \_/\_/ |_|_| |_|_| |_|\___|_|    /_/   \_\_____|\___/    ###
+###                                                                          ###
+################################################################################
+################################################################################
+################################################################################
 
 
 
@@ -33,7 +33,7 @@
 
 
 #########################################
-##### Allwinner A10 BUILD SETTINGS: #####
+##### Allwinner A20 BUILD SETTINGS: #####
 #########################################
 
 ### These settings MUST be checked/edited ###
@@ -96,7 +96,7 @@ extra_files="" # some extra archives (list seperated by a single blank space!) t
 
 qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/linux-3.4.87-qemu-cortex-a8-1.1.tar.xz" # qemu kernel file name
 
-std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/3.4.86-ba10-tv-box-mali-r3p2-01rel2-1.1-dirty.tar.xz" # std kernel file name
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A20/MK802II_A20/kernels/stage_3.4-sunxi/3.4.86-mk802ii_a20-mali-r3p2-01rel2-1.3-dirty.tar.xz" # std kernel file name
 
 work_image_size_MB="6144" # size of the temporary image file, in which the installation process is carried out
 
@@ -210,17 +210,17 @@ size_alignment="1" ## size of spare space before the root partitionto starts (in
 use_compressed_swapspace="yes" # Do you want to use a compressed SWAP space in RAM (can potentionally improve performance)?
 compressed_swapspace_module_name="zram" # Name of the kernel module for compressed swapspace in RAM (could either be called 'ramzswap' or 'zram', depending on your kernel)
 compressed_swapspace_nr_option_name="num_devices" # Depending on kernel version, this option can have slight differences (used to be 'num_devices', then zram_num_devices' and then 'num_devices' again.
-compressed_swapspace_blkdev_count="1" # Number of swap devices to create. Should be equal to the number of CPU cores.
+compressed_swapspace_blkdev_count="2" # Number of swap devices to create. Should be equal to the number of CPU cores.
 compressed_swapspace_priority="32767" # Priority for swap usage. The higher the priority (32767 being the biggest possible number), the more likely the swap gets used first.
-compressed_swapspace_size_MB="256" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
+compressed_swapspace_size_MB="128" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
 vm_swappiness="" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
 
 ##########################
 ##### BOOT SETTINGS: #####
 ##########################
 
-bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/bootloader/u-boot-ba_10_tv_box.tar.xz" # Archive that contains all necessary bootlaoder files
-bootloader_script_bin="/home/celemine1gig/Allwinner/A10/BA_10_TV_BOX/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
+bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A20/MK802II_A20/u-boot/u-boot-mk802ii-a20.tar.xz" # Archive that contains all necessary bootlaoder files
+bootloader_script_bin="/home/celemine1gig/Allwinner/A20/MK802II_A20/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A20 machine (generated through the '.fex'-file)
 
 
 ####################################

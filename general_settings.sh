@@ -41,7 +41,7 @@ fi
 ## SET YOUR TARGET MACHINE HERE ##
 ##################################
 ###
-machine_id="allwinner-a10"
+machine_id="allwinner-a20"
 ###
 ##################################
 ##################################
@@ -78,15 +78,17 @@ user_password="tester" # password for the user of the target system
 
 ### These settings are for experienced users ###
 
+time_zone="Europe/Berlin" # timezone setting for package tzdata
 std_locale="en_US.UTF-8" # initial language setting for console (alternatively for example 'en_US.UTF-8')'
 
 locale_list="en_US.UTF-8 de_DE.UTF-8" # list of locales to enable during configuration
 
-tar_format="xz" # bz2(=bzip2), gz(=gzip) or xz(=xz)
+tar_format="bz2" # bz2(=bzip2), gz(=gzip) or xz(=xz)
 
 qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesystem will be mounted
 
 base_sys_cache_tarball="${machine_id}_${build_target}_${build_target_version}_minbase.tgz" # cache file created by debootstrap, if caching is enabled
+add_pack_tarball_basename="additional_packages_${machine_id}_${build_target}_${build_target_version}" # basename for the creation of additional packages cache tarballs
 
 ### Check these very carefully, if you experience errors while running 'check_n_install_prerequisites'
 apt_prerequisites_debian="libncurses5-dev emdebian-archive-keyring debootstrap binfmt-support qemu-user-static qemu-system parted" # packages needed for the build process on debian
