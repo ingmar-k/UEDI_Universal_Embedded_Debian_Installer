@@ -488,7 +488,8 @@ fi
 
 echo ${hostname} > /etc/hostname 2>>/debootstrap_stg2_errors.txt
 
-echo \"127.0.0.1 ${hostname}\" >> /etc/hosts 2>>/debootstrap_stg2_errors.txt
+echo \"127.0.0.1 ${hostname}
+127.0.0.1 localhost\" >> /etc/hosts 2>>/debootstrap_stg2_errors.txt
 echo \"nameserver ${nameserver_addr}\" > /etc/resolv.conf 2>>/debootstrap_stg2_errors.txt
 
 cat <<END > /etc/rc.local 2>>/debootstrap_stg2_errors.txt
