@@ -72,8 +72,8 @@ machine_debootstrap_arch="armhf" # Architecture setting for debootstrap. For exa
 deb_add_packages="apt-utils,dialog,locales,udev,dictionaries-common,aspell" # packages to directly include in the first debootstrap stage
 additional_packages="rsyslog u-boot-tools file manpages man-db module-init-tools isc-dhcp-client netbase ifupdown iproute iputils-ping net-tools wget vim nano hdparm rsync bzip2 lbzip2 plzip pigz p7zip unrar unzip zip p7zip-full screen less usbutils psmisc strace info ethtool python whois time ruby perl parted ftp gettext rcconf lrzsz libpam-modules util-linux mtd-utils mesa-utils libopenvg1-mesa libgles2-mesa ntp ntpdate iotop powertop lbzip2" # List of packages (each seperated by a single space) that get added to the rootfs
 additional_dev_packages="git subversion build-essential autoconf automake make libtool xorg-dev xutils-dev libdrm-dev libxcb-dri2-0-dev libglew-dev"
-additional_desktop_packages="task-lxde-desktop pcmanfm icedove filezilla xarchiver smplayer vlc mpv"
-additional_wireless_packages="firmware-realtek wireless-tools iw wpasupplicant" # packages for wireless lan
+additional_desktop_packages="task-xfce-desktop icedove filezilla vlc mpv mesa-utils-extra gtk2-engines-nodoka moblin-icon-theme"
+additional_wireless_packages="firmware-realtek wireless-tools iw wpasupplicant rfkill" # packages for wireless lan
 
 module_load_list="ump mali drm mali_drm" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
@@ -96,7 +96,7 @@ extra_files="" # some extra archives (list seperated by a single blank space!) t
 
 qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/linux-3.4.87-qemu-cortex-a8-1.1.tar.xz" # qemu kernel file name
 
-std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/3.4.86-hackberry-mali-r3p2-01rel2-1.0-dirty.tar.xz" # std kernel file name
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/3.4.86-ba10-tv-box-mali-r3p2-01rel2-1.2-00010-gb4ab937.tar.xz" # std kernel file name
 
 work_image_size_MB="6144" # size of the temporary image file, in which the installation process is carried out
 
@@ -175,7 +175,7 @@ mali_module_version="r3p2" # Version of the mali module, included in the used ke
 # Git repositories needed for full functionality
 libdri2_git="git://github.com/robclark/libdri2.git"
 sunxi_mali_git="git://github.com/linux-sunxi/sunxi-mali.git"
-sunxi_mali_proprietary_git="git://github.com/linux-sunxi/sunxi-mali-proprietary.git"
+#sunxi_mali_proprietary_git="git://github.com/linux-sunxi/sunxi-mali-proprietary.git"
 libump_git="https://github.com/linux-sunxi/libump.git"
 xf86_video_fbturbo_git="https://github.com/ssvb/xf86-video-fbturbo.git"
 libcedarx_git="git://github.com/willswang/libcedarx.git"
@@ -185,7 +185,7 @@ libvdpau_sunxi_git="https://github.com/linux-sunxi/libvdpau-sunxi.git"
 # Names of the corresponding cache tarballs
 libdri2_git_tarball="libdri2.tar.bz2"
 sunxi_mali_git_tarball="sunxi-mali.tar.bz2" # tarball name for sunxi_mali cache
-sunxi_mali_proprietary_git_tarball="sunxi-mali-proprietary.tar.bz2" # tarball name for mali-proprietary cache
+#sunxi_mali_proprietary_git_tarball="sunxi-mali-proprietary.tar.bz2" # tarball name for mali-proprietary cache
 xf86_video_fbturbo_git_tarball="xf86-video-fbturbo.tar.bz2"
 libump_git_tarball="libump.tar.bz2"
 libcedarx_git_tarball="libcedarx.tar.bz2" # tarball name for libcedarx cache
@@ -219,8 +219,8 @@ vm_swappiness="" # (empty string makes the script ignore this setting and uses t
 ##### BOOT SETTINGS: #####
 ##########################
 
-bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/bootloader/u-boot_Hackberry_22042014.tar.xz" # Archive that contains all necessary bootlaoder files
-bootloader_script_bin="/home/celemine1gig/Allwinner/A10/Hackberry/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
+bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/bootloader/u-boot-ba_10_tv_box.tar.xz" # Archive that contains all necessary bootlaoder files
+bootloader_script_bin="/home/celemine1gig/Allwinner/A10/BA10_TV_BOX/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
 
 
 ####################################

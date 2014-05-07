@@ -892,6 +892,7 @@ fi
 chmod +x ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
 
 echo "#!/bin/bash
+echo \"Creating a swapfile now, with a size of '`expr ${qemu_mem_size} \/ 2` MB'.\"
 dd if=/dev/zero of=/swapfile bs=1M count=`expr ${qemu_mem_size} \/ 2`   ### swapfile, the same size as the qemu memory setting
 mkswap /swapfile
 chown root:root /swapfile
