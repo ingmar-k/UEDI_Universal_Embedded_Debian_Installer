@@ -39,13 +39,13 @@
 ### These settings MUST be checked/edited ###
 
 build_target="debian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
-build_target_version="testing" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
+build_target_version="unstable" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
 target_mirror_url="http://ftp.de.debian.org/debian/" # mirror address for debian or emdebian
 target_repositories="main contrib non-free" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
 current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
 output_filename="${build_target}_rootfs_${machine_id}_${current_date}" # base name of the output file (compressed rootfs)
-output_dir_base="/home/${LOG_NAME}/${machine_id}_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
+output_dir_base="/home/${LOG_NAME}/shared_data/${machine_id}_${build_target}_build" # where the script is going to put its output files (YOU NEED TO CHECK THIS!; default is the home-directory of the currently logged in user) 
 ########## Necessary check and setting output_dir #############
 echo ${output_dir_base} |grep '//' >/dev/null
 if [ "$?" = "0" ]
@@ -72,7 +72,7 @@ machine_debootstrap_arch="armhf" # Architecture setting for debootstrap. For exa
 deb_add_packages="apt-utils,dialog,locales,udev,dictionaries-common,aspell" # packages to directly include in the first debootstrap stage
 additional_packages="rsyslog u-boot-tools file manpages man-db module-init-tools isc-dhcp-client netbase ifupdown iproute iputils-ping net-tools wget vim nano hdparm rsync bzip2 lbzip2 plzip pigz p7zip unrar unzip zip p7zip-full screen less usbutils psmisc strace info ethtool python whois time ruby perl parted ftp gettext rcconf lrzsz libpam-modules util-linux mtd-utils mesa-utils libopenvg1-mesa libgles2-mesa ntp ntpdate iotop powertop lbzip2" # List of packages (each seperated by a single space) that get added to the rootfs
 additional_dev_packages="git subversion build-essential autoconf automake make libtool xorg-dev xutils-dev libdrm-dev libxcb-dri2-0-dev libglew-dev"
-additional_desktop_packages="task-xfce-desktop icedove filezilla vlc mpv mesa-utils-extra gtk2-engines-nodoka moblin-icon-theme"
+additional_desktop_packages="task-xfce-desktop icedove filezilla vlc mpv mesa-utils-extra gtk2-engines-nodoka moblin-icon-theme phoronix-test-suite"
 additional_wireless_packages="firmware-realtek wireless-tools iw wpasupplicant rfkill" # packages for wireless lan
 
 module_load_list="ump mali drm mali_drm" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
@@ -170,12 +170,11 @@ Wireless_Mode="5" # wireless mode setting for rt3090
 #######################################
 
 ### ARM Mali400 graphics driver settings ###
-mali_module_version="r3p2" # Version of the mali module, included in the used kernel (could be r3p0, r3p2 ...)
+mali_module_version="r3p2-01rel1" # For 'r3p2-01rel2', set tis to 'r3p2-01rel1', according to sunxi-mali documentation. Version of the mali module, included in the used kernel (could be r3p0, r3p2 ...)
 
 # Git repositories needed for full functionality
 libdri2_git="git://github.com/robclark/libdri2.git"
 sunxi_mali_git="git://github.com/linux-sunxi/sunxi-mali.git"
-#sunxi_mali_proprietary_git="git://github.com/linux-sunxi/sunxi-mali-proprietary.git"
 libump_git="https://github.com/linux-sunxi/libump.git"
 xf86_video_fbturbo_git="https://github.com/ssvb/xf86-video-fbturbo.git"
 libcedarx_git="git://github.com/willswang/libcedarx.git"
@@ -185,7 +184,6 @@ libvdpau_sunxi_git="https://github.com/linux-sunxi/libvdpau-sunxi.git"
 # Names of the corresponding cache tarballs
 libdri2_git_tarball="libdri2.tar.bz2"
 sunxi_mali_git_tarball="sunxi-mali.tar.bz2" # tarball name for sunxi_mali cache
-#sunxi_mali_proprietary_git_tarball="sunxi-mali-proprietary.tar.bz2" # tarball name for mali-proprietary cache
 xf86_video_fbturbo_git_tarball="xf86-video-fbturbo.tar.bz2"
 libump_git_tarball="libump.tar.bz2"
 libcedarx_git_tarball="libcedarx.tar.bz2" # tarball name for libcedarx cache
@@ -220,7 +218,7 @@ vm_swappiness="" # (empty string makes the script ignore this setting and uses t
 ##########################
 
 bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/bootloader/u-boot-ba_10_tv_box.tar.xz" # Archive that contains all necessary bootlaoder files
-bootloader_script_bin="/home/celemine1gig/Allwinner/A10/BA10_TV_BOX/script_bin/script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
+bootloader_script_bin="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/script_bin/ba10_tv_box_script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
 
 
 ####################################

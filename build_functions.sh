@@ -597,9 +597,6 @@ fi
 echo "#!/bin/bash
 export LANG=C 2>>/debootstrap_stg2_errors.txt
 
-echo \"${time_zone}\" > /etc/timezone
-dpkg-reconfigure --frontend noninteractive tzdata
-
 apt-key update
 apt-get -d -y --force-yes install ${additional_packages} 2>>/debootstrap_stg2_errors.txt
 
@@ -653,6 +650,9 @@ END
 
 sed -i 's/^\([1-6]:.* tty[1-6]\)/#\1/' /etc/inittab 2>>/debootstrap_stg2_errors.txt
 echo '#T0:2345:respawn:/sbin/getty -L ${console_device} ${console_baudrate} vt100' >> /etc/inittab 2>>/debootstrap_stg2_errors.txt	# insert (temporarily commented!) entry for serial console
+
+echo \"${time_zone}\" > /etc/timezone
+dpkg-reconfigure --frontend noninteractive tzdata
 
 rm /debootstrap_pt2.sh
 exit 0" > ${qemu_mnt_dir}/debootstrap_pt2.sh
@@ -1041,6 +1041,7 @@ sed -i 's<#T0:2345:respawn:/sbin/getty<T0:2345:respawn:/sbin/getty<g' /etc/initt
 dpkg -l >/installed_packages.txt
 df -ah > /disk_usage.txt
 
+
 reboot 2>>/post_debootstrap_errors.txt
 exit 0" > ${output_dir}/mnt_debootstrap/setup.sh
 chmod +x ${output_dir}/mnt_debootstrap/setup.sh
@@ -1138,10 +1139,16 @@ Please be patient! This could take some time (depending on the image size)."
 	then
 		write_log "Temporary filesystem checked out, OK!"
 	else
-		write_log "ERROR: State of Temporary filesystem is NOT OK!
+		fsck.${rootfs_filesystem_type} -fy ${output_dir}/${output_filename}.img # run it again, to be sure!!!
+		if [ "$?" = "0" ]
+		then
+			write_log "Temporary filesystem checked out, OK (second try)!"
+		else
+			write_log "ERROR: State of Temporary filesystem is NOT OK!
 'fsck.${rootfs_filesystem_type}' returned error code '$?'. Exiting now."
-		regular_cleanup
-		exit 24
+			regular_cleanup
+			exit 24
+		fi
 	fi
 else
 	write_log "ERROR: Image file still mounted.
