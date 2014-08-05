@@ -41,7 +41,11 @@ fi
 ## SET YOUR TARGET MACHINE HERE ##
 ##################################
 ###
+<<<<<<< HEAD
 machine_id="plx-ox820"
+=======
+machine_id="marvell-kirkwood"
+>>>>>>> 1e95e846e734e578b592cef31d921aed365dccec
 ###
 ##################################
 ##################################
@@ -83,7 +87,7 @@ std_locale="en_US.UTF-8" # initial language setting for console (alternatively f
 
 locale_list="en_US.UTF-8 de_DE.UTF-8" # list of locales to enable during configuration
 
-tar_format="bz2" # bz2(=bzip2), gz(=gzip) or xz(=xz)
+tar_format="gz" # bz2(=bzip2), gz(=gzip) or xz(=xz)
 
 qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesystem will be mounted
 
