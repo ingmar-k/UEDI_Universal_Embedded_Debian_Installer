@@ -215,7 +215,7 @@ EOF
 			mkswap ${device}3 # swap
 		elif [ -f ${output_dir}/tmp/u-boot.img -a -f ${output_dir}/tmp/u-boot-spl.bin ] # case of using the newer bootloader files
 		then
-			mkfs.vfat -L "boot" ${device}1 >/dev/null # partition 1 needs to formatted with the FAT filesystem
+			mkfs.vfat ${device}1 >/dev/null # partition 1 needs to formatted with the FAT filesystem
 			### Now writing the hex codes for SATA booting to the drive's bootsector
 			perl <<EOF | dd of=${device} bs=512
 print "\x00" x 0x1a4;
