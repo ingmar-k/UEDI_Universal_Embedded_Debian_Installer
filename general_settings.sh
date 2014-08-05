@@ -41,11 +41,9 @@ fi
 ## SET YOUR TARGET MACHINE HERE ##
 ##################################
 ###
-<<<<<<< HEAD
-machine_id="plx-ox820"
-=======
 machine_id="marvell-kirkwood"
->>>>>>> 1e95e846e734e578b592cef31d921aed365dccec
+
+
 ###
 ##################################
 ##################################
