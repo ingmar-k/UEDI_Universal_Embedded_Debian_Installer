@@ -38,7 +38,7 @@
 #####################################
 
 build_target="emdebian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
-build_target_version="stable" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
+build_target_version="jessie" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
 target_mirror_url="http://ftp.uk.debian.org/emdebian/grip" # mirror address for debian or emdebian
 target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
@@ -95,7 +95,7 @@ extra_files="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/extra_files/pogoplu
 
 qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.13.4-qemu-ppv3-1.0.tar.bz2" # qemu kernel file name
 
-std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.12.13-ppv3-classic-armv6k-1.0-gf80a7ad-dirty.tar.bz2" # std kernel file name
+std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.12.0-ppv3-classic-1.0.tar.bz2" # std kernel file name
 
 work_image_size_MB="512" # size of the temporary image file, in which the installation process is carried out
 
@@ -172,7 +172,7 @@ size_alignment="1" ## size of spare space before the root partitionto starts (in
 ####################################
 
 # set the following option to 'yes', if you want to create a rootfs on a SATA drive, sd card or anything similar, that needs an external bootloader, in order to boot from it.
-external_bootloader="yes" 
+external_bootloader="no" 
 # However, if you want to boot from a memory device that the internal bootloader already supports, then be sure to set the option ABOVE to 'no' !!!
 
 
@@ -180,7 +180,7 @@ external_bootloader="yes"
 ##### BOOT SETTINGS: #####
 ##########################
 
-bootloader_package="/home/celemine1gig/Pogoplug_V3/u-boot/u-boot-SATA_old_14032014.tar.bz2" # Archive that contains all necessary bootlaoder files
+bootloader_package="/home/celemine1gig/Pogoplug_V3/u-boot/u-boot-SATA_13032014.tar.bz2" # Archive that contains all necessary bootlaoder files
 
 
 ####################################

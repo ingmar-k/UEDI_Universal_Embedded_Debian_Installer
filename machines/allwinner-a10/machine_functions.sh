@@ -47,9 +47,10 @@ KERNEL==\"g2d\", MODE=\"0660\", GROUP=\"video\"
 KERNEL==\"disp\", MODE=\"0660\", GROUP=\"video\"
 KERNEL==\"cedar_dev\", MODE=\"0660\", GROUP=\"video\"" > ${qemu_mnt_dir}/etc/udev/rules.d/50-mali.rules
 
-sed -i 's/^reboot//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'reboot'
-sed -i 's/^exit 0//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # and the 'exit 0' from the standard script, in order to be able to concatenate further code lines before reboot and exit 
-#sed -i 's|^exit 0|chmod 777 /dev/g2d\nchmod 777 /dev/disp\nchmod 777 /dev/cedar_dev\nexit 0|' ${qemu_mnt_dir}/etc/rc.local 2>>/post_debootstrap_config_errors.txt
+sed -i 's/^reboot//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'reboot' line, before readding it later
+sed -i 's/^exit 0//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'exit 0' line, before readding it later
+sed -i 's/^swapoff /swapfile//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'swapoff /swapfile' line, before readding it later
+sed -i 's/^rm /swapfile//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'rm /swapfile' line, before readding it later
 
 echo "
 echo \"Trying to compile the mali drivers and libraries, now.\"
@@ -191,6 +192,8 @@ echo \"Everything DONE!!!\"
 
 sleep 5
 
+swapoff /swapfile
+rm /swapfile
 reboot 2>>/post_debootstrap_errors.txt
 exit 0" >> ${qemu_mnt_dir}/setup.sh
 chmod +x ${qemu_mnt_dir}/setup.sh
@@ -218,7 +221,7 @@ then
 				cd ${qemu_mnt_dir}/root/mali_build/${tmp_3} && git pull
 			else
 				write_log "Tarball '${tmp}' NOT found in cache.
-	Generating it now."
+Generating it now."
 				get_n_check_file "${tmp_2}" "${i}" "${qemu_mnt_dir}/root/mali_build"
 				if [ "${i}" = "sunxi_mali_git" ]
 				then
