@@ -9,18 +9,18 @@
 
 # Description: Get the card/drive device and then create the partitions and format them
 
-###########################################################
-###########################################################
-###########################################################
-###    _  ___      _                             _      ###
-###   | |/ (_)_ __| | ____      _____   ___   __| |     ###
-###   | ' /| | '__| |/ /\ \ /\ / / _ \ / _ \ / _` |     ###
-###   | . \| | |  |   <  \ V  V / (_) | (_) | (_| |     ###
-###   |_|\_\_|_|  |_|\_\  \_/\_/ \___/ \___/ \__,_|     ###
-###                                                     ###
-###########################################################
-###########################################################
-###########################################################
+#################################################
+#################################################
+#################################################
+###    _     ____   ____ _____ _ _____        ###
+###   | |   |  _ \ / ___|___ // |___ /_  __   ###
+###   | |   | |_) | |     |_ \| | |_ \ \/ /   ###
+###   | |___|  __/| |___ ___) | |___) >  <    ###
+###   |_____|_|    \____|____/|_|____/_/\_\   ###
+###                                           ###
+#################################################
+#################################################
+#################################################
 
 
 ##################
@@ -32,14 +32,14 @@
 # Reading the file 'README.md' is also highly recommended!
 
 
-############################################
-##### MARVELL KIRKWOOD BUILD SETTINGS: #####
-############################################
+#######################################
+##### NXP LPC313x BUILD SETTINGS: #####
+#######################################
 
-build_target="emdebian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
-build_target_version="jessie" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
-target_mirror_url="http://www.emdebian.org/grip" # mirror address for debian or emdebian
-target_repositories="main" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
+build_target="debian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
+build_target_version="testing" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
+target_mirror_url="http://ftp.de.debian.org/debian/" # mirror address for debian or emdebian
+target_repositories="main contrib non-free" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
 current_date=`date +%s` # current date for use on all files that should get a consistent timestamp
 output_filename="${build_target}_rootfs_${machine_id}_${current_date}" # base name of the output file (compressed rootfs)
@@ -70,7 +70,7 @@ machine_ubuntu_prereq="" # Here you can specify any machine specific prerequisit
 
 machine_debootstrap_arch="armel" # Architecture setting for debootstrap. For example 'armel' for ARMv5 and 'armhf' for ARMv7.
 deb_add_packages="apt-utils,dialog,locales,emdebian-archive-keyring,debian-archive-keyring" # packages to directly include in the first debootstrap stage
-additional_packages="mtd-utils udev ntp netbase kmod isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm cpufrequtils" # List of packages (each seperated by a single space) that get added to the rootfs
+additional_packages="mtd-utils udev ntp netbase module-init-tools isc-dhcp-client nano bzip2 unzip zip screen less usbutils psmisc procps ifupdown iputils-ping wget net-tools ssh hdparm" # List of packages (each seperated by a single space) that get added to the rootfs
 additional_wireless_packages="wireless-tools wpasupplicant" # packages for wireless lan; mostly for the Pogoplug V3 Pro
 
 module_load_list="" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
@@ -92,7 +92,7 @@ extra_files="" # some extra archives (list seperated by a single blank space!) t
 
 qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Pogoplug_V3/kernels/3.13.4-qemu-ppv3-1.0.tar.bz2" # qemu kernel file name
 
-std_kernel_pkg="/home/celemine1gig/kirkwood/ls-wvl/kernels/3.16-1/3.16-1-kirkwood-ls-wvl-1.2-1408107209_root_ubi.tar.xz" # std kernel file name
+std_kernel_pkg="/home/celemine1gig/kirkwood/ls-wvl/kernels/3.15.5-1/kirkwood-ls-wvl-1.0-1407263706.tar.xz" # std kernel file name
 
 work_image_size_MB="1024" # size of the temporary image file, in which the installation process is carried out
 
@@ -171,7 +171,6 @@ compressed_swapspace_nr_option_name="num_devices" # Depending on kernel version,
 compressed_swapspace_blkdev_count="1" # Number of swap devices to create. Should be equal to the number of CPU cores.
 compressed_swapspace_priority="32767" # Priority for swap usage. The higher the priority (32767 being the biggest possible number), the more likely the swap gets used first.
 compressed_swapspace_size_MB="256" # size of the ramzswap/zram device in MegaByte (MB !!!), per CPU-core (so per default 2 swap devices will be created)
-compressed_swapspace_algorithm="lz4" # compression algorithm (can either be 'lzo' or 'lz4'); default and oly option for older kernel is 'lzo'
 vm_swappiness="" # (empty string makes the script ignore this setting and uses the debian default). Setting for general kernel RAM swappiness: Default in Linux mostly is 60. Higher number makes the kernel swap faster.
 
 
