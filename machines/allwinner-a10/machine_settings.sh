@@ -39,7 +39,7 @@
 ### These settings MUST be checked/edited ###
 
 build_target="debian" # possible settings are either 'debian' or 'emdebian'. The system you want to BUILD as output of this script.
-build_target_version="unstable" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
+build_target_version="stable" # The version of debian/emdebian that you want to build (ATM wheezy is the stable version)
 target_mirror_url="http://ftp.de.debian.org/debian/" # mirror address for debian or emdebian
 target_repositories="main contrib non-free" # what repos to use in the sources.list (for example 'main contrib non-free' for Debian)
 
@@ -70,12 +70,12 @@ machine_ubuntu_prereq="" # Here you can specify any machine specific prerequisit
 
 machine_debootstrap_arch="armhf" # Architecture setting for debootstrap. For example 'armel' for ARMv5 and 'armhf' for ARMv7.
 deb_add_packages="apt-utils,dialog,locales,udev,dictionaries-common,aspell" # packages to directly include in the first debootstrap stage
-additional_packages="rsyslog u-boot-tools file manpages man-db module-init-tools isc-dhcp-client netbase ifupdown iproute iputils-ping net-tools wget vim nano hdparm rsync bzip2 lbzip2 plzip pigz p7zip unrar unzip zip p7zip-full screen less usbutils psmisc strace info ethtool python whois time ruby perl parted ftp gettext rcconf lrzsz libpam-modules util-linux mtd-utils mesa-utils libopenvg1-mesa libgles2-mesa ntp ntpdate iotop powertop lbzip2" # List of packages (each seperated by a single space) that get added to the rootfs
+additional_packages="rsyslog u-boot-tools file manpages man-db module-init-tools isc-dhcp-client netbase ifupdown iproute iputils-ping net-tools wget vim nano hdparm rsync bzip2 plzip pigz p7zip unrar unzip zip p7zip-full screen less usbutils psmisc strace info ethtool python whois time ruby perl parted ftp gettext rcconf lrzsz libpam-modules util-linux mtd-utils mesa-utils libopenvg1-mesa libgles2-mesa ntp ntpdate iotop powertop" # List of packages (each seperated by a single space) that get added to the rootfs
 additional_dev_packages="git subversion build-essential autoconf automake make libtool xorg-dev xutils-dev libdrm-dev libxcb-dri2-0-dev libglew-dev"
 additional_desktop_packages="task-xfce-desktop icedove filezilla vlc mpv mesa-utils-extra gtk2-engines-nodoka moblin-icon-theme phoronix-test-suite"
 additional_wireless_packages="firmware-realtek wireless-tools iw wpasupplicant rfkill" # packages for wireless lan
 
-module_load_list="ump mali drm mali_drm" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
+module_load_list="ump mali drm mali_drm 8192cu" # names of modules (for example wireless, leds ...) that should be automatically loaded through /etc/modules (list them, seperated by a single blank space)
 
 ethernet_interface="eth0" # (IMPORTANT!!!) What ethernet interface exists on your device? (for example 'eth0' for standard ethernet)
 wireless_interface="wlan0" # (IMPORTANT!!!) What wireless interface exists on your device? (for example 'wlan0' for standard wireless)
@@ -89,6 +89,7 @@ rootfs_filesystem_type="ext4" # what filesystem type should the created rootfs b
 # AND your specified (and flashed!) kernel has to have support for that file system (compiled in, NOT as module!!!)
 #swap_partition="/dev/mmcblk0p3" # Specify the name of the swap device (for example '/dev/sda2', is the second partition of a USB device is used as swap. CAN BE LEFT EMPTY, although this is not recommended!
 swap_partition="LABEL=mmc_swap"
+#swap_partition="/dev/mmcblk0p3"
 
 ### These settings are for experienced users ###
 
@@ -96,7 +97,7 @@ extra_files="" # some extra archives (list seperated by a single blank space!) t
 
 qemu_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/linux-3.4.87-qemu-cortex-a8-1.1.tar.xz" # qemu kernel file name
 
-std_kernel_pkg="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/kernels/3.4.86-ba10-tv-box-mali-r3p2-01rel2-1.2-00010-gb4ab937.tar.xz" # std kernel file name
+std_kernel_pkg="/home/celemine1gig/Allwinner/A10/ba10_tv_box/kernels/stage_3.4/3.4.103-ba10-tv-box-mali-r3p2-01rel2-1.1-00867-g86b1aa9.tar.xz" # std kernel file name
 
 work_image_size_MB="6144" # size of the temporary image file, in which the installation process is carried out
 
@@ -217,8 +218,8 @@ vm_swappiness="" # (empty string makes the script ignore this setting and uses t
 ##### BOOT SETTINGS: #####
 ##########################
 
-bootloader_package="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/bootloader/u-boot-ba_10_tv_box.tar.xz" # Archive that contains all necessary bootlaoder files
-bootloader_script_bin="http://www.hs-augsburg.de/~ingmar_k/Allwinner/A10/script_bin/ba10_tv_box_script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
+bootloader_package="/home/celemine1gig/Allwinner/A10/ba10_tv_box/u-boot/u-boot_2014.04_sunxi.tar.xz" # Archive that contains all necessary bootlaoder files
+bootloader_script_bin="/home/celemine1gig/Allwinner/A10/ba10_tv_box/script_bin/ba10_tv_box_05092014_script.bin" # File 'script.bin', which contains the low level configuration of the specfic A10 machine (generated through the '.fex'-file)
 
 
 ####################################

@@ -202,43 +202,47 @@ if [ "${use_cache}" = "yes" ]
 then
 	if [ -d "${output_dir_base}/cache/" ]
 	then
-		for i in libdri2_git libump_git sunxi_mali_git xf86_video_fbturbo_git libcedarx_git libvdpau_sunxi_git
+		for n in libdri2_git libump_git sunxi_mali_git xf86_video_fbturbo_git libcedarx_git libvdpau_sunxi_git
 		do
-			tmp="${output_dir_base}/cache/\${${i}_tarball}"
+			tmp="${output_dir_base}/cache/\${${n}_tarball}"
 			tmp=`eval echo ${tmp}`
-			tmp_2="\${${i}}"
+			tmp_2="\${${n}}"
 			tmp_2=`eval echo ${tmp_2}`
-			tmp_3="${i}"
+			tmp_3="${n}"
 			tmp_3="${tmp_3%%_git}"
 			tmp_3="${tmp_3//_/-}"
 			if [ -f ${tmp} ]
 			then
-				write_log "Using ${i} tarball '${tmp}' from cache."
+				write_log "Using ${n} tarball '${tmp}' from cache."
 				tar_all extract "${tmp}" "${qemu_mnt_dir}/root/mali_build"
 				cd ${qemu_mnt_dir}/root/mali_build/${tmp_3} && git pull
 			else
 				write_log "Tarball '${tmp}' NOT found in cache.
 	Generating it now."
-				get_n_check_file "${tmp_2}" "${i}" "${qemu_mnt_dir}/root/mali_build"
-				if [ "${i}" = "sunxi_mali_git" ]
+				if [ "${tmp_3}" = "sunxi-mali" ]
 				then
+					get_n_check_file "${tmp_2}" "${n}" "${qemu_mnt_dir}/root/mali_build"
+					echo "Seems like this is sunxi_mali_git"
+					echo "read 'n' to be '${n}'." 
 					sleep 1
 					cd ${qemu_mnt_dir}/root/mali_build/sunxi-mali
 					sleep 1
 					git submodule init && write_log "'submodule init' for sunxi-mali ran successfully!"
 					sleep 1
 					git submodule update && write_log "'submodule update' for sunxi-mali ran successfully!"
+				else
+					get_n_check_file "${tmp_2}" "${n}" "${qemu_mnt_dir}/root/mali_build"
 				fi
 				cd ${qemu_mnt_dir}/root/mali_build
-				tar_all compress "${tmp}" ${tmp_3} && write_log "Cache tarball for ${i} successfully created."
+				tar_all compress "${tmp}" ${tmp_3} && write_log "Cache tarball for ${n} successfully created."
 			fi
 		done
 	fi
 else
-	for i in sunxi_mali_git sunxi_mali_proprietary_git xf86_video_fbturbo_git libdri2_git libcedarx_git libvdpau_sunxi_git libump_git
+	for m in libdri2_git libump_git sunxi_mali_git xf86_video_fbturbo_git libcedarx_git libvdpau_sunxi_git
 	do
 		get_n_check_file "${tmp_2}" "${tmp_3}" "${qemu_mnt_dir}/root/mali_build"
-		if [ "${i}" = "sunxi_mali_git" ]
+		if [ "${tmp_3}" = "sunxi-mali" ]
 		then
 			sleep 1
 			cd ${qemu_mnt_dir}/root/mali_build/sunxi-mali

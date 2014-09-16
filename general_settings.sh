@@ -41,7 +41,7 @@ fi
 ## SET YOUR TARGET MACHINE HERE ##
 ##################################
 ###
-machine_id="marvell-kirkwood"
+machine_id="allwinner-a10"
 
 
 ###
@@ -85,7 +85,7 @@ std_locale="en_US.UTF-8" # initial language setting for console (alternatively f
 
 locale_list="en_US.UTF-8 de_DE.UTF-8" # list of locales to enable during configuration
 
-tar_format="gz" # bz2(=bzip2), gz(=gzip) or xz(=xz)
+tar_format="bz2" # bz2(=bzip2), gz(=gzip) or xz(=xz)
 
 qemu_mnt_dir="${output_dir}/mnt_debootstrap" # directory where the qemu filesystem will be mounted
 
