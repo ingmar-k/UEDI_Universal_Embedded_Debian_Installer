@@ -42,11 +42,15 @@ write_log "Starting machine specific post-debootstrap configuration steps."
 
 write_log "Creating the udev rule for 'mali' and 'ump', now."
 echo "KERNEL==\"mali\", MODE=\"0660\", GROUP=\"video\"
-KERNEL==\"ump\", MODE=\"0660\", GROUP=\"video\"" > ${qemu_mnt_dir}/etc/udev/rules.d/50-mali.rules
+KERNEL==\"ump\", MODE=\"0660\", GROUP=\"video\"
+KERNEL==\"g2d\", MODE=\"0660\", GROUP=\"video\"
+KERNEL==\"disp\", MODE=\"0660\", GROUP=\"video\"
+KERNEL==\"cedar_dev\", MODE=\"0660\", GROUP=\"video\"" > ${qemu_mnt_dir}/etc/udev/rules.d/50-mali.rules
 
-sed -i 's/^reboot//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'reboot'
-sed -i 's/^exit 0//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # and the 'exit 0' from the standard script, in order to be able to concatenate further code lines before reboot and exit 
-sed -i 's|^exit 0|chmod 777 /dev/g2d\nchmod 777 /dev/disp\nchmod 777 /dev/cedar_dev\nexit 0|' ${qemu_mnt_dir}/etc/rc.local 2>>/post_debootstrap_config_errors.txt
+sed -i 's/^reboot//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'reboot' line, before readding it later
+sed -i 's/^exit 0//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'exit 0' line, before readding it later
+sed -i 's/^swapoff /swapfile//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'swapoff /swapfile' line, before readding it later
+sed -i 's/^rm /swapfile//' ${qemu_mnt_dir}/setup.sh 2>>/post_debootstrap_config_errors.txt # remove the 'rm /swapfile' line, before readding it later
 
 echo "
 echo \"Trying to compile the mali drivers and libraries, now.\"
@@ -54,43 +58,26 @@ cd /root/mali_build 2>>/mali_drv_compile_errors.txt
 if [ \"\${?}\" = \"0\" ]
 then
 	echo \"Successfully changed into directory '/root/mali_build'.\" && echo \"Successfully changed into directory '/root/mali_build'.\" >> /mali_drv_compile.txt
-	
-	cd /root/mali_build/libdri2 2>>/mali_drv_compile_errors.txt
-	if [ \"\${?}\" = \"0\" ]
+	if [ \"${mali_module_version}\" = \"r3p0\" ]
 	then
-		echo \"Successfully changed into directory '\`pwd\`'.\" && echo \"Successfully changed into directory '\`pwd\`'.\" >> /mali_drv_compile.txt 
-		./autogen.sh 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'autogen.sh' (libdri2) command.\" && echo \"Successfully ran the 'autogen.sh' (libdri2) command.\" >> /mali_drv_compile.txt
-		./configure --prefix=/usr --x-includes=/usr/include --x-libraries=/usr/lib 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the configuration for libdri2.\" && echo \"Successfully ran the configuration for libdri2.\" >> /mali_drv_compile.txt
-		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (libdri2) command.\" && echo \"Successfully ran the 'make' (libdri2) command.\" >> /mali_drv_compile.txt
-		make install 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make install' (libdri2) command.\" && echo \"Successfully ran the 'make install' (libdri2) command.\" >> /mali_drv_compile.txt
-	else
-		echo \"Could not change directory into '/root/mali_build/libdri2'
+		cd /root/mali_build/libdri2 2>>/mali_drv_compile_errors.txt
+		if [ \"\${?}\" = \"0\" ]
+		then
+			echo \"Successfully changed into directory '\`pwd\`'.\" && echo \"Successfully changed into directory '\`pwd\`'.\" >> /mali_drv_compile.txt 
+			./autogen.sh 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'autogen.sh' (libdri2) command.\" && echo \"Successfully ran the 'autogen.sh' (libdri2) command.\" >> /mali_drv_compile.txt
+			./configure --prefix=/usr --x-includes=/usr/include --x-libraries=/usr/lib 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the configuration for libdri2.\" && echo \"Successfully ran the configuration for libdri2.\" >> /mali_drv_compile.txt
+			make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (libdri2) command.\" && echo \"Successfully ran the 'make' (libdri2) command.\" >> /mali_drv_compile.txt
+			make install 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make install' (libdri2) command.\" && echo \"Successfully ran the 'make install' (libdri2) command.\" >> /mali_drv_compile.txt
+		else
+			echo \"Could not change directory into '/root/mali_build/libdri2'
 Please investigate!\" >>/mali_drv_compile_errors.txt
-	fi
-	
-	cd /root/mali_build/sunxi-mali 2>>/mali_drv_compile_errors.txt
-	if [ \"\${?}\" = \"0\" ]
-	then
-		echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
-		make config VERSION=${mali_module_version} ABI=armhf EGL_TYPE=x11 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make config' command of 'sunxi-mali'.\" >> /mali_drv_compile.txt
-		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (sunxi-mali) command.\" && echo \"Successfully ran the 'make' (sunxi-mali) command.\" >> /mali_drv_compile.txt
-		make install 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make install' (sunxi-mali) command.\" && echo \"Successfully ran the 'make install' (sunxi-mali) command.\" >> /mali_drv_compile.txt
+		fi
 	else
-		echo \"Could not change directory into '/root/mali_build/sunxi-mali'
-Please investigate!\" >>/mali_drv_compile_errors.txt
+		echo \"Mali module version was found to be '${mali_module_version}', so libdri2 not needed.\"
+		echo \"Mali module version was found to be '${mali_module_version}', so libdri2 not needed.\" >> /mali_drv_compile.txt
 	fi
-	
-	cd lib/sunxi-mali-proprietary && echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
-	if [ \"\${?}\" = \"0\" ]
-	then
-		make VERSION=${mali_module_version} ABI=armhf EGL_TYPE=x11 -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (sunxi-mali-proprietary) command.\" && echo \"Successfully ran the 'make' (sunxi-mali-proprietary) command.\" >> /mali_drv_compile.txt
-		make install 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make install' (sunxi-mali-proprietary) command.\" && echo \"Successfully ran the 'make install' (sunxi-mali-proprietary) command.\" >> /mali_drv_compile.txt
-		cd ../../test 2>>/mali_drv_compile_errors.txt && echo \"Changed directory to '../../test'.\" && echo \"Changed directory to '../../test'.\" >> /mali_drv_compile.txt
-		make -j2 test 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make test' (sunxi-mali) command.\" && echo \"Successfully ran the 'make test' (sunxi-mali) command.\" >> /mali_drv_compile.txt
-	else
-		echo \"Could not change directory into '/root/mali_build/sunxi-mali-proprietary'
-Please investigate!\" >>/mali_drv_compile_errors.txt
-	fi
+
+	ldconfig
 	
 	cd /root/mali_build/libump 2>>/mali_drv_compile_errors.txt && echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
 	if [ \"\${?}\" = \"0\" ]
@@ -103,6 +90,29 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 		echo \"Could not change directory into '/root/mali_build/libump'
 Please investigate!\" >>/mali_drv_compile_errors.txt
 	fi
+
+	ldconfig
+	
+	cd /root/mali_build/sunxi-mali 2>>/mali_drv_compile_errors.txt
+	if [ \"\${?}\" = \"0\" ]
+	then
+		echo \"Changed directory to '\`pwd\`'.\" && echo \"Changed directory to '\`pwd\`'.\" >> /mali_drv_compile.txt
+		make config VERSION=${mali_module_version} ABI=armhf EGL_TYPE=x11  2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make config' command of 'sunxi-mali'.\" >> /mali_drv_compile.txt
+		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make' (sunxi-mali) command.\" && echo \"Successfully ran the 'make' (sunxi-mali) command.\" >> /mali_drv_compile.txt
+		make install 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make install' (sunxi-mali) command.\" && echo \"Successfully ran the 'make install' (sunxi-mali) command.\" >> /mali_drv_compile.txt
+		cd /root/mali_build/sunxi-mali/test 2>>/mali_drv_compile_errors.txt && echo \"Changed directory to '/root/mali_build/sunxi-mali/test'.\" && echo \"Changed directory to '/root/mali_build/sunxi-mali/test'.\" >> /mali_drv_compile.txt
+		grep '-lX11' Makefile
+		if [ ! \"$?\" = \"0\" ]
+		then
+			sed -i 's/lGLESv2/lGLESv2 -lX11/' /root/mali_build/sunxi-mali/test/Makefile 2>>/mali_drv_compile_errors.txt
+		fi
+		make test 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran the 'make test' (sunxi-mali) command.\" && echo \"Successfully ran the 'make test' (sunxi-mali) command.\" >> /mali_drv_compile.txt
+	else
+		echo \"Could not change directory into '/root/mali_build/sunxi-mali'
+Please investigate!\" >>/mali_drv_compile_errors.txt
+	fi
+
+	ldconfig
 	
 	cd /root/mali_build/xf86-video-fbturbo 2>>/mali_drv_compile_errors.txt
 	if [ \"\${?}\" = \"0\" ]
@@ -130,6 +140,8 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 		echo \"Could not change directory into '/root/mali_build/libcedarx'
 Please investigate!\" >>/mali_drv_compile_errors.txt
 	fi
+
+	ldconfig
 	
 	cd /root/mali_build/libvdpau-sunxi 2>>/mali_drv_compile_errors.txt
 	if [ \"\${?}\" = \"0\" ]
@@ -138,10 +150,13 @@ Please investigate!\" >>/mali_drv_compile_errors.txt
 		make -j2 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran 'libvdpau-sunxi' make.\" && echo \"Successfully ran 'libvdpau-sunxi' make.\" >> /mali_drv_compile.txt
 		make install 2>>/mali_drv_compile_errors.txt && echo \"Successfully ran 'libvdpau-sunxi' make install.\" && echo \"Successfully ran 'libvdpau-sunxi' make install.\" >> /mali_drv_compile.txt
 		export VDPAU_DRIVER=sunxi && echo \"Successfully exported 'VDPAU_DRIVER=sunxi'.\" && echo \"Successfully exported 'VDPAU_DRIVER=sunxi'.\" >> /mali_drv_compile.txt
+		export VDPAU_OSD=1 && echo \"Successfully exported 'VDPAU_OSD=1'.\" && echo \"Successfully exported 'VDPAU_OSD=1'.\" >> /mali_drv_compile.txt
 	else
 		echo \"Could not change directory into '/root/mali_build/libvdpau-sunxi'
 Please investigate!\" >>/mali_drv_compile_errors.txt
 	fi
+
+	ldconfig
 	
 else
 	echo \"ERROR: Couldn't change into directory '/root/mali_build/'!\" >>/post_debootstrap_errors.txt
@@ -167,6 +182,18 @@ swapoff /dev/zram0
 sleep 1
 rm /swapfile
 
+if [ -d /usr/lib/arm-linux-gnueabihf/mesa-egl/ ]
+then
+	mv /usr/lib/arm-linux-gnueabihf/mesa-egl/ /usr/lib/arm-linux-gnueabihf/.mesa-egl/ # move the mesa-egl libraries in order to fix opengles
+fi
+
+sync
+echo \"Everything DONE!!!\"
+
+sleep 5
+
+swapoff /swapfile
+rm /swapfile
 reboot 2>>/post_debootstrap_errors.txt
 exit 0" >> ${qemu_mnt_dir}/setup.sh
 chmod +x ${qemu_mnt_dir}/setup.sh
@@ -178,7 +205,7 @@ if [ "${use_cache}" = "yes" ]
 then
 	if [ -d "${output_dir_base}/cache/" ]
 	then
-		for i in sunxi_mali_git sunxi_mali_proprietary_git xf86_video_fbturbo_git libdri2_git libcedarx_git libvdpau_sunxi_git libump_git
+		for i in libdri2_git libump_git sunxi_mali_git xf86_video_fbturbo_git libcedarx_git libvdpau_sunxi_git
 		do
 			tmp="${output_dir_base}/cache/\${${i}_tarball}"
 			tmp=`eval echo ${tmp}`
@@ -196,6 +223,15 @@ then
 				write_log "Tarball '${tmp}' NOT found in cache.
 Generating it now."
 				get_n_check_file "${tmp_2}" "${i}" "${qemu_mnt_dir}/root/mali_build"
+				if [ "${i}" = "sunxi_mali_git" ]
+				then
+					sleep 1
+					cd ${qemu_mnt_dir}/root/mali_build/sunxi-mali
+					sleep 1
+					git submodule init && write_log "'submodule init' for sunxi-mali ran successfully!"
+					sleep 1
+					git submodule update && write_log "'submodule update' for sunxi-mali ran successfully!"
+				fi
 				cd ${qemu_mnt_dir}/root/mali_build
 				tar_all compress "${tmp}" ${tmp_3} && write_log "Cache tarball for ${i} successfully created."
 			fi
@@ -205,6 +241,16 @@ else
 	for i in sunxi_mali_git sunxi_mali_proprietary_git xf86_video_fbturbo_git libdri2_git libcedarx_git libvdpau_sunxi_git libump_git
 	do
 		get_n_check_file "${tmp_2}" "${tmp_3}" "${qemu_mnt_dir}/root/mali_build"
+		if [ "${i}" = "sunxi_mali_git" ]
+		then
+			sleep 1
+			cd ${qemu_mnt_dir}/root/mali_build/sunxi-mali
+			sleep 1
+			git submodule init && write_log "'submodule init' for sunxi-mali ran successfully!"
+			sleep 1
+			git submodule update && write_log "'submodule update' for sunxi-mali ran successfully!"
+		fi
+		cd ${qemu_mnt_dir}/root/mali_build
 	done
 fi
 
@@ -430,7 +476,7 @@ then
 		then 
 			tar_all extract "${output_dir}/${output_filename}.tar.${tar_format}" "${output_dir}/drive/root"
 			cp ${output_dir}/drive/root/uImage ${output_dir}/drive/boot/ 
-			cp ${output_dir}/tmp/${bootloader_script_bin##*/} ${output_dir}/drive/boot/			
+			cp ${output_dir}/tmp/${bootloader_script_bin##*/} ${output_dir}/drive/boot/script.bin			
 		else
 			write_log "ERROR: File '${output_dir}/${output_filename}.tar.${tar_format}' doesn't seem to exist. Exiting now!"
 			regular_cleanup

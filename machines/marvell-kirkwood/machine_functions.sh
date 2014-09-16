@@ -199,7 +199,7 @@ Exiting now!"
 		if [ "$?" = "0" ]
 		then
 			write_log "drive successfully created!
-You can remove the drive now and try it with your pogoplug-V3.
+You can remove the drive now and try it with your Kirkwood device.
 ALL DONE!"
 		else
 			write_log "ERROR: Filesystem check on your card returned an error status. Maybe your card is going bad, or something else went wrong.

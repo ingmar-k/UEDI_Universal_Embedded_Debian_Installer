@@ -406,8 +406,14 @@ cd /root 2>>/debootstrap_stg2_errors.txt
 
 cat <<END > /etc/apt/sources.list 2>>/debootstrap_stg2_errors.txt
 deb ${target_mirror_url} ${build_target_version} ${target_repositories}
+END
+
+if [ \"${apt_incl_src}\" = \"yes\" ]
+then
+	cat <<END >> /etc/apt/sources.list 2>>/debootstrap_stg2_errors.txt
 deb-src ${target_mirror_url} ${build_target_version} ${target_repositories}
 END
+fi
 
 if [ \"${build_target}\" = \"debian\" ]
 then
@@ -415,10 +421,15 @@ then
 	then
 		cat <<END >>/etc/apt/sources.list 2>>/debootstrap_stg2_errors.txt
 deb ${target_mirror_url} ${build_target_version}-updates ${target_repositories}
-deb-src ${target_mirror_url} ${build_target_version}-updates ${target_repositories}
 deb http://security.debian.org/ ${build_target_version}/updates ${target_repositories}
+END
+		if [ \"${apt_incl_src}\" = \"yes\" ]
+		then
+			cat <<END >>/etc/apt/sources.list 2>>/debootstrap_stg2_errors.txt
+deb-src ${target_mirror_url} ${build_target_version}-updates ${target_repositories}
 deb-src http://security.debian.org/ ${build_target_version}/updates ${target_repositories}
 END
+		fi
 	fi
 fi
 
@@ -461,13 +472,7 @@ then
 	then
 		cat <<END >> /etc/network/interfaces
 iface ${wireless_interface} inet dhcp
-wpa-driver wext
 wpa-ssid ${wireless_ssid}
-wpa-ap-scan 1
-wpa-proto RSN
-wpa-pairwise CCMP
-wpa-group CCMP
-wpa-key-mgmt WPA-PSK
 wpa-psk ${wireless_password}
 END
 	elif [ \"${ip_type_wireless}\" = \"static\" ]
@@ -842,10 +847,36 @@ esac" > ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
 
 start() {
 	modprobe ${compressed_swapspace_module_name} ${compressed_swapspace_nr_option_name}=${compressed_swapspace_blkdev_count}
+	sleep 1" > ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
+		if [ "${compressed_swapspace_blkdev_count}" = "1" ]
+		then
+			echo "
+	if [ -f /sys/block/zram0/comp_algorithm ]
+	then
+		echo ${compressed_swapspace_algorithm} > /sys/block/zram0/comp_algorithm
+		sleep 1
+	fi
+	echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram0/disksize
 	sleep 1
+	mkswap -L zram_0 /dev/zram0
+	sleep 1
+	swapon -p ${compressed_swapspace_priority} /dev/zram0
+}
+
+stop() {
+	swapoff /dev/zram0
+	sleep 1
+}" >> ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
+		else
+			echo "
 	for n in {1..${compressed_swapspace_blkdev_count}}
 	do
 		z=\`expr \${n} - 1\`
+		if [ -f /sys/block/zram\${z}/comp_algorithm ]
+		then
+			echo ${compressed_swapspace_algorithm} > /sys/block/zram\${z}/comp_algorithm
+			sleep 1
+		fi
 		echo `expr ${compressed_swapspace_size_MB} \* 1024 \* 1024` > /sys/block/zram\${z}/disksize
 		sleep 1
 		mkswap -L zram_\${z} /dev/zram\${z}
@@ -861,8 +892,10 @@ stop() {
 		swapoff /dev/zram\${z}
 		sleep 1
 	done
-}
-
+}" >> ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
+		fi
+		
+		echo "
 case \"\$1\" in
     start)
         start
@@ -879,7 +912,7 @@ case \"\$1\" in
         echo \"Usage: \$0 {start|stop|restart}\"
         RETVAL=1
 esac
-" > ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
+" >> ${output_dir}/mnt_debootstrap/etc/init.d/compressed_swapspace.sh
 	else
 		write_log "ERROR: Variable 'use_compressed_swapspace' was set to 'yes, however
 NO VALID SETTING for 'compressed_swapspace_module_name' was found!
@@ -1041,7 +1074,8 @@ sed -i 's<#T0:2345:respawn:/sbin/getty<T0:2345:respawn:/sbin/getty<g' /etc/initt
 dpkg -l >/installed_packages.txt
 df -ah > /disk_usage.txt
 
-
+swapoff /swapfile
+rm /swapfile
 reboot 2>>/post_debootstrap_errors.txt
 exit 0" > ${output_dir}/mnt_debootstrap/setup.sh
 chmod +x ${output_dir}/mnt_debootstrap/setup.sh
